@@ -1,0 +1,100 @@
+{
+  "standard": "DERATING",
+  "version_tag": "v1.0",
+  "display_name": "元器件降额准则（典型档位）",
+  "source_ref": "参考 GJB/Z 35-93《元器件降额准则》、IPC-9592 及主流厂商应用手册中的常用降额档位",
+  "disclaimer": "本规范为【示例档位，仅供演示/学习】。各企业/行业的降额要求差异很大（军用、车规、消费电子各不相同），正式使用请按本单位规范替换本文件；引擎按 JSON 驱动，无需改代码。",
+  "notes": {
+    "ratio": "降额系数 = 实际工作应力 / 额定值。规范给出的 max_ratio 是「不得超过」的上限，例如电容电压 max_ratio=0.8 表示工作电压不得高于额定电压的 80%。",
+    "warn": "「接近」区（marginal）的下界 = max_ratio − warn_margin。落在这一带虽未违规，但余量已经很薄，温度波动或来料偏差就可能越线，工程上应视为待改进项。",
+    "margin": "温度类降额用绝对余量表达（°C），因为温度按比例算没有物理意义：判定条件为 T_op ≤ T_max − margin_c。",
+    "no_data": "描述里解析不到额定值时判定为 no_data（缺数据），不参与违规统计，但会在报告里单独列出，提示补录。"
+  },
+  "default_warn_margin": 0.1,
+  "rules": {
+    "CAP_ALU": [
+      { "stress_type": "voltage", "rated_field": "voltage", "applied_field": "voltage", "max_ratio": 0.8, "note": "铝电解电容电压降额至 80%，可显著降低漏电流与内部发热" },
+      { "stress_type": "temperature", "rated_field": "temp_max_c", "applied_field": "temp_op_c", "rule_type": "margin", "margin_c": 10, "note": "工作温度应至少低于额定上限 10°C，否则电解液干涸速率大幅上升" }
+    ],
+    "CAP_CER": [
+      { "stress_type": "voltage", "rated_field": "voltage", "applied_field": "voltage", "max_ratio": 0.7, "note": "陶瓷电容（尤其 X7R/Y5V 高容值）直流偏压会损失容值，同时降额抑制击穿" }
+    ],
+    "CAP_FILM": [
+      { "stress_type": "voltage", "rated_field": "voltage", "applied_field": "voltage", "max_ratio": 0.7, "note": "薄膜电容 dv/dt 与自愈特性要求留足电压余量" }
+    ],
+    "CAP_TANT": [
+      { "stress_type": "voltage", "rated_field": "voltage", "applied_field": "voltage", "max_ratio": 0.5, "note": "钽电容对过压极敏感，行业通行做法是降额到 50%（固态钽可放宽到 60%）" }
+    ],
+    "RES_THICK": [
+      { "stress_type": "power", "rated_field": "power", "applied_field": "power", "max_ratio": 0.5, "note": "厚膜电阻长期功率不超过额定的 50%，避免阻值漂移" }
+    ],
+    "RES_METAL_FILM": [
+      { "stress_type": "power", "rated_field": "power", "applied_field": "power", "max_ratio": 0.5, "note": "同厚膜，另需关注脉冲过载" }
+    ],
+    "RES_WIREWOUND": [
+      { "stress_type": "power", "rated_field": "power", "applied_field": "power", "max_ratio": 0.5, "note": "线绕电阻热惯性大，局部热点温度是主要限制" }
+    ],
+    "IND_POWER": [
+      { "stress_type": "current", "rated_field": "current", "applied_field": "current", "max_ratio": 0.7, "note": "功率电感电流降额需同时考虑饱和电流与温升电流，取更严者" }
+    ],
+    "DIO_RECT": [
+      { "stress_type": "current", "rated_field": "current", "applied_field": "current", "max_ratio": 0.7, "note": "整流二极管正向电流降额" },
+      { "stress_type": "voltage", "rated_field": "voltage", "applied_field": "voltage", "max_ratio": 0.7, "note": "反向耐压降额，抑制浪涌击穿" }
+    ],
+    "DIO_SBD": [
+      { "stress_type": "voltage", "rated_field": "voltage", "applied_field": "voltage", "max_ratio": 0.6, "note": "肖特基反向漏电随温度急增，耐压降额更严" }
+    ],
+    "DIO_ZENER": [
+      { "stress_type": "power", "rated_field": "power", "applied_field": "power", "max_ratio": 0.5, "note": "稳压管工作在击穿区，功耗降额防止热失控" }
+    ],
+    "TRA_BJT": [
+      { "stress_type": "power", "rated_field": "power", "applied_field": "power", "max_ratio": 0.5, "note": "三极管集电极功耗降额，配合 SOA 检查" }
+    ],
+    "TRA_MOSFET": [
+      { "stress_type": "voltage", "rated_field": "voltage", "applied_field": "voltage", "max_ratio": 0.8, "note": "Vds 降额至 80%，抑制开关尖峰" },
+      { "stress_type": "power", "rated_field": "power", "applied_field": "power", "max_ratio": 0.5, "note": "导通+开关损耗合计功率降额" }
+    ],
+    "TRA_IGBT": [
+      { "stress_type": "voltage", "rated_field": "voltage", "applied_field": "voltage", "max_ratio": 0.7, "note": "IGBT 关断尖峰高，Vces 降额更严" },
+      { "stress_type": "power", "rated_field": "power", "applied_field": "power", "max_ratio": 0.5, "note": "结温是真正的限制，功耗降额是间接手段" }
+    ],
+    "IC_ANALOG": [
+      { "stress_type": "voltage", "rated_field": "voltage", "applied_field": "voltage", "max_ratio": 0.9, "note": "供电电压不超过推荐工作范围上限的 90%" }
+    ],
+    "IC_DIGITAL": [
+      { "stress_type": "voltage", "rated_field": "voltage", "applied_field": "voltage", "max_ratio": 0.9, "note": "核心电压降额，防止过冲应力" }
+    ],
+    "IC_POWER": [
+      { "stress_type": "voltage", "rated_field": "voltage", "applied_field": "voltage", "max_ratio": 0.85, "note": "电源管理 IC 输入承受浪涌，降额 85%" },
+      { "stress_type": "power", "rated_field": "power", "applied_field": "power", "max_ratio": 0.5, "note": "自身损耗功耗降额" }
+    ],
+    "CONN_BOARD": [
+      { "stress_type": "current", "rated_field": "current", "applied_field": "current", "max_ratio": 0.5, "note": "连接器单针电流降额 50%，同时注意多针同时载流的温升叠加" }
+    ],
+    "CONN_WIRE": [
+      { "stress_type": "current", "rated_field": "current", "applied_field": "current", "max_ratio": 0.5, "note": "同上；压接质量对实际载流能力影响很大" }
+    ],
+    "CONN_TERMINAL": [
+      { "stress_type": "current", "rated_field": "current", "applied_field": "current", "max_ratio": 0.5, "note": "端子接触电阻随氧化上升，需留足余量" }
+    ],
+    "RELAY": [
+      { "stress_type": "current", "rated_field": "current", "applied_field": "current", "max_ratio": 0.75, "note": "触点电流降额 75%，感性负载需另加灭弧" },
+      { "stress_type": "voltage", "rated_field": "voltage", "applied_field": "voltage", "max_ratio": 0.8, "note": "触点电压降额 80%" }
+    ],
+    "LED": [
+      { "stress_type": "current", "rated_field": "current", "applied_field": "current", "max_ratio": 0.7, "note": "LED 正向电流降额 70%，直接决定光衰速率与结温" }
+    ],
+    "FUSE": [
+      { "stress_type": "current", "rated_field": "current", "applied_field": "current", "max_ratio": 0.75, "note": "保险丝额定电流应为正常工作电流的 1.3~1.5 倍（即降额 67%~75%），否则会误熔断" }
+    ],
+    "XTAL": [
+      { "stress_type": "voltage", "rated_field": "voltage", "applied_field": "voltage", "max_ratio": 0.9, "note": "有源晶振供电降额" }
+    ],
+    "SWITCH": [
+      { "stress_type": "current", "rated_field": "current", "applied_field": "current", "max_ratio": 0.5, "note": "机械开关触点电流降额 50%，兼顾动作寿命" }
+    ],
+    "MODULE_POWER": [
+      { "stress_type": "power", "rated_field": "power", "applied_field": "power", "max_ratio": 0.7, "note": "成品电源模块通常按 70% 负载率选型" }
+    ]
+  }
+}

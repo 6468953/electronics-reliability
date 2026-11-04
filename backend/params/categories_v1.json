@@ -1,0 +1,435 @@
+{
+  "version_tag": "v1.0",
+  "display_name": "电子元件分类知识库",
+  "disclaimer": "类目体系与关键词为本系统自建（面向 BOM 规格描述匹配），不依赖任何企业料号库。关键词权重 1~5：5 = 决定性特征词，1 = 弱相关修饰词。",
+  "notes": {
+    "weight": "关键词权重。匹配得分 = min(1, 命中权重之和 / 6)。之所以除以 6 而不是「全部关键词权重之和」，是因为一条规格描述永远只会命中部分关键词，用总量归一化会把所有得分压到 0.3 以下，阈值就失去意义了。",
+    "negative": "排除词（负向关键词）。命中即把该候选得分乘 0.45——「陶瓷电容」的描述绝不该被判成铝电解，而它们共享「电容」「uF」「50V」这些词，光靠正向词分不开。",
+    "samples": "种子描述样例。既作为人工阅读的参考，也参与字符 n-gram 相似度计算（描述写法千变万化，样例能兜住缩写与口语化写法）。"
+  },
+  "major_categories": [
+    { "code": "CAP", "name": "电容" },
+    { "code": "RES", "name": "电阻" },
+    { "code": "IND", "name": "电感" },
+    { "code": "DIO", "name": "二极管" },
+    { "code": "TRA", "name": "晶体管" },
+    { "code": "IC", "name": "集成电路" },
+    { "code": "CONN", "name": "连接器" },
+    { "code": "XTAL_G", "name": "晶振" },
+    { "code": "FUSE_G", "name": "保险丝" },
+    { "code": "RELAY_G", "name": "继电器" },
+    { "code": "SWITCH_G", "name": "开关" },
+    { "code": "LED_G", "name": "LED" },
+    { "code": "MODULE", "name": "模组" },
+    { "code": "EM", "name": "机电件" }
+  ],
+  "categories": [
+    {
+      "code": "CAP_ALU", "parent": "CAP", "name": "铝电解电容",
+      "aliases": ["电解电容", "铝电解", "Aluminum Electrolytic", "Elec Cap"],
+      "description": "以铝箔与电解液构成的极性电容，常见圆柱形插件或贴片（V-Chip），容值大、耐压中等，有明确额定寿命（如 2000h@105℃）",
+      "keywords": [
+        { "k": "铝电解", "w": 5 }, { "k": "电解电容", "w": 5 }, { "k": "electrolytic", "w": 5 },
+        { "k": "cap alu", "w": 5 }, { "k": "电解", "w": 3 }, { "k": "低esr", "w": 2 },
+        { "k": "105℃", "w": 1.5 }, { "k": "2000h", "w": 1.5 }, { "k": "uF", "w": 0.5 }
+      ],
+      "negatives": ["陶瓷", "薄膜", "钽", "mlcc", "c0g", "x7r"],
+      "samples": ["CAP ALU 1000uF 25V 105℃ 2000h φ10×20", "电解电容 470uF/35V 低ESR 105度"]
+    },
+    {
+      "code": "CAP_CER", "parent": "CAP", "name": "陶瓷电容（MLCC）",
+      "aliases": ["MLCC", "贴片电容", "陶瓷电容", "Ceramic Capacitor"],
+      "description": "多层陶瓷介质贴片电容，无极性，尺寸小，介质代号 X7R/X5R/C0G/NP0/Y5V，容值随直流偏压下降",
+      "keywords": [
+        { "k": "cap cer", "w": 5 }, { "k": "mlcc", "w": 5 }, { "k": "陶瓷电容", "w": 5 }, { "k": "ceramic", "w": 4 },
+        { "k": "x7r", "w": 3 }, { "k": "x5r", "w": 3 }, { "k": "c0g", "w": 3 },
+        { "k": "np0", "w": 3 }, { "k": "贴片电容", "w": 3 }, { "k": "0402", "w": 1 }, { "k": "0603", "w": 1 }
+      ],
+      "negatives": ["铝电解", "电解", "薄膜", "钽"],
+      "samples": ["CAP CER 0.1uF 50V X7R 0603", "MLCC 10uF 16V X5R 0805 ±10%"]
+    },
+    {
+      "code": "CAP_FILM", "parent": "CAP", "name": "薄膜电容",
+      "aliases": ["Film Capacitor", "CBB", "聚丙烯电容", "涤纶电容"],
+      "description": "以聚丙烯/聚酯薄膜为介质的电容，耐高压、低损耗、自愈性好，常用于 EMI 滤波与谐振",
+      "keywords": [
+        { "k": "cap film", "w": 5 }, { "k": "薄膜", "w": 5 }, { "k": "film", "w": 5 }, { "k": "cbb", "w": 5 },
+        { "k": "聚丙烯", "w": 4 }, { "k": "涤纶", "w": 4 }, { "k": "mkp", "w": 3 }, { "k": "mkt", "w": 3 }
+      ],
+      "negatives": ["铝电解", "陶瓷", "mlcc", "钽"],
+      "samples": ["CAP FILM 0.47uF 630V CBB22 引脚间距15mm", "薄膜电容 100nF/1000V MKP"]
+    },
+    {
+      "code": "CAP_TANT", "parent": "CAP", "name": "钽电容",
+      "aliases": ["Tantalum", "钽电解", "固体钽"],
+      "description": "以钽粉烧结体为阳极的极性电容，体积小容值大，对过压与反向电压极敏感，失效模式可能短路",
+      "keywords": [
+        { "k": "cap tant", "w": 5 }, { "k": "钽", "w": 5 }, { "k": "tantalum", "w": 5 }, { "k": "固体钽", "w": 4 }
+      ],
+      "negatives": ["铝电解", "陶瓷", "薄膜"],
+      "samples": ["CAP TANT 100uF 16V 钽电容 CASE-D", "钽电容 22uF/25V 贴片"]
+    },
+    {
+      "code": "RES_THICK", "parent": "RES", "name": "厚膜贴片电阻",
+      "aliases": ["贴片电阻", "SMD Resistor", "厚膜电阻", "片式电阻"],
+      "description": "氧化钌厚膜印刷在陶瓷基片上的贴片电阻，常见 0402/0603/0805/1206 封装，精度 1%/5%",
+      "keywords": [
+        { "k": "贴片电阻", "w": 5 }, { "k": "厚膜", "w": 5 }, { "k": "res ", "w": 2 },
+        { "k": "电阻", "w": 2 }, { "k": "0402", "w": 2.5 }, { "k": "0603", "w": 2.5 }, { "k": "0805", "w": 2.5 },
+        { "k": "1206", "w": 2.5 }, { "k": "1%", "w": 1.5 }, { "k": "kω", "w": 1.5 }
+      ],
+      "negatives": ["薄膜", "线绕", "电位器", "水泥"],
+      "samples": ["RES 10KΩ 1% 1/10W 0603 厚膜", "贴片电阻 100R 5% 0402"]
+    },
+    {
+      "code": "RES_METAL_FILM", "parent": "RES", "name": "金属膜电阻",
+      "aliases": ["金属膜", "Metal Film", "精密电阻", "插件电阻"],
+      "description": "真空镀膜工艺的金属膜电阻，插件形式（轴向/径向），温漂小、噪声低，用于精密与模拟电路",
+      "keywords": [
+        { "k": "金属膜", "w": 5 }, { "k": "metal film", "w": 5 }, { "k": "精密电阻", "w": 4 },
+        { "k": "轴向", "w": 2 }, { "k": "1/4w", "w": 2 }, { "k": "温漂", "w": 1.5 }
+      ],
+      "negatives": ["贴片", "厚膜", "线绕"],
+      "samples": ["RES METAL FILM 22KΩ 1% 1/4W 轴向", "金属膜电阻 100K 0.1% 25ppm"]
+    },
+    {
+      "code": "RES_WIREWOUND", "parent": "RES", "name": "线绕电阻",
+      "aliases": ["Wirewound", "绕线电阻", "水泥电阻", "功率电阻"],
+      "description": "电阻丝绕制在陶瓷骨架上的功率型电阻，可承受大电流与高温，常见水泥封装或铝壳散热",
+      "keywords": [
+        { "k": "线绕", "w": 5 }, { "k": "wirewound", "w": 5 }, { "k": "水泥电阻", "w": 5 },
+        { "k": "绕线", "w": 4 }, { "k": "功率电阻", "w": 3 }, { "k": "5w", "w": 2 }, { "k": "10w", "w": 2 }
+      ],
+      "negatives": ["贴片", "薄膜", "金属膜"],
+      "samples": ["RES WIREWOUND 10Ω 5W 水泥封装", "线绕电阻 100Ω 10W 铝壳"]
+    },
+    {
+      "code": "RES_POT", "parent": "RES", "name": "电位器/可调电阻",
+      "aliases": ["可调电阻", "微调电阻", "Trimmer", "Potentiometer"],
+      "description": "阻值可机械调节的电阻器，用于校准与设定点调整，有旋转式与多圈精密式",
+      "keywords": [
+        { "k": "pot ", "w": 4 }, { "k": "电位器", "w": 5 }, { "k": "可调电阻", "w": 5 }, { "k": "trimmer", "w": 5 }, { "k": "可调", "w": 3 },
+        { "k": "多圈", "w": 3 }, { "k": "微调", "w": 4 }
+      ],
+      "negatives": ["贴片电阻", "金属膜"],
+      "samples": ["POT 10KΩ 多圈精密可调 3296W", "电位器 100K 单圈 旋转式"]
+    },
+    {
+      "code": "IND_CHIP", "parent": "IND", "name": "贴片电感",
+      "aliases": ["叠层电感", "绕线电感", "SMD Inductor", "Chip Inductor"],
+      "description": "贴片形式的叠层或绕线电感，用于滤波与阻抗匹配，感值 nH~uH 级",
+      "keywords": [
+        { "k": "贴片电感", "w": 5 }, { "k": "叠层电感", "w": 5 }, { "k": "ind", "w": 2 },
+        { "k": "nh", "w": 3 }, { "k": "uh", "w": 2.5 }, { "k": "0603", "w": 1 }
+      ],
+      "negatives": ["共模", "变压器", "功率电感"],
+      "samples": ["IND 4.7uH 0603 贴片电感", "叠层电感 100nH ±5% 0402"]
+    },
+    {
+      "code": "IND_POWER", "parent": "IND", "name": "功率电感",
+      "aliases": ["Power Inductor", "绕线功率电感", "屏蔽电感"],
+      "description": "开关电源储能用的功率电感，关注饱和电流与直流电阻，常见屏蔽罩结构与 5×5 以上尺寸",
+      "keywords": [
+        { "k": "ind pwr", "w": 5 }, { "k": "功率电感", "w": 5 }, { "k": "power inductor", "w": 5 }, { "k": "屏蔽电感", "w": 4 }, { "k": "屏蔽", "w": 3 },
+        { "k": "饱和电流", "w": 4 }, { "k": "isat", "w": 3 }, { "k": "10a", "w": 2 }
+      ],
+      "negatives": ["共模", "贴片电感"],
+      "samples": ["IND PWR 10uH 3A 屏蔽 6×6×4.5", "功率电感 22uH/5A 饱和电流 6.5A"]
+    },
+    {
+      "code": "IND_COMMON", "parent": "IND", "name": "共模/滤波电感",
+      "aliases": ["共模电感", "Common Mode Choke", "滤波器"],
+      "description": "双绕组共模扼流圈，用于电源与信号线的 EMI 抑制，常与电容组成滤波网络",
+      "keywords": [
+        { "k": "共模", "w": 5 }, { "k": "common mode", "w": 5 }, { "k": "扼流", "w": 4 },
+        { "k": "choke", "w": 4 }, { "k": "emi", "w": 2 }
+      ],
+      "negatives": ["功率电感", "贴片电感"],
+      "samples": ["CMC 10mH 2A 共模电感 双绕组", "共模扼流圈 1mH/3A EMI滤波"]
+    },
+    {
+      "code": "DIO_RECT", "parent": "DIO", "name": "整流二极管",
+      "aliases": ["整流管", "Rectifier", "1N4007", "普通二极管"],
+      "description": "用于整流的 PN 结二极管，正向压降约 0.7~1V，反向恢复时间较长，适合低频大电流场合",
+      "keywords": [
+        { "k": "dio rect", "w": 5 }, { "k": "整流", "w": 5 }, { "k": "rectifier", "w": 5 }, { "k": "1n400", "w": 4 },
+        { "k": "1n540", "w": 4 }, { "k": "diode", "w": 2 }, { "k": "a)", "w": 0.5 }
+      ],
+      "negatives": ["肖特基", "稳压", "tvs", "发光"],
+      "samples": ["DIO RECT 1N4007 1A 1000V DO-41", "整流二极管 3A/600V"]
+    },
+    {
+      "code": "DIO_SBD", "parent": "DIO", "name": "肖特基二极管",
+      "aliases": ["Schottky", "肖特基", "SBD", "SS34"],
+      "description": "金属-半导体结二极管，正向压降低（0.3~0.5V）、恢复快，用于开关电源续流，但反向漏电随温度上升明显",
+      "keywords": [
+        { "k": "dio sbd", "w": 5 }, { "k": "肖特基", "w": 5 }, { "k": "schottky", "w": 5 }, { "k": "sbd", "w": 4 },
+        { "k": "ss34", "w": 4 }, { "k": "ss14", "w": 3 }, { "k": "续流", "w": 2 }
+      ],
+      "negatives": ["整流管", "稳压", "发光"],
+      "samples": ["DIO SBD SS34 3A 40V SMA 肖特基", "肖特基二极管 5A/60V 低正向压降"]
+    },
+    {
+      "code": "DIO_ZENER", "parent": "DIO", "name": "稳压二极管",
+      "aliases": ["稳压管", "Zener", "齐纳"],
+      "description": "工作在反向击穿区的二极管，用于电压钳位与基准，需限制功耗防止热失控",
+      "keywords": [
+        { "k": "稳压二极管", "w": 5 }, { "k": "稳压管", "w": 5 }, { "k": "zener", "w": 5 },
+        { "k": "齐纳", "w": 5 }, { "k": "bzt52", "w": 3 }
+      ],
+      "negatives": ["整流", "肖特基", "发光"],
+      "samples": ["DIO ZENER 5.1V 0.5W SOD-123 稳压管", "齐纳二极管 12V/1W"]
+    },
+    {
+      "code": "DIO_TVS", "parent": "DIO", "name": "TVS/瞬态抑制二极管",
+      "aliases": ["TVS", "瞬态抑制", "ESD保护管"],
+      "description": "用于吸收浪涌与静电的钳位器件，响应速度快（ns 级），参数关注钳位电压与峰值脉冲功率",
+      "keywords": [
+        { "k": "tvs", "w": 5 }, { "k": "瞬态抑制", "w": 5 }, { "k": "esd", "w": 3.5 },
+        { "k": "钳位", "w": 3 }, { "k": "smaj", "w": 3 }
+      ],
+      "negatives": ["稳压管", "整流", "肖特基"],
+      "samples": ["DIO TVS SMBJ12A 600W 钳位19.9V", "TVS二极管 ESD保护 5V 双向"]
+    },
+    {
+      "code": "TRA_BJT", "parent": "TRA", "name": "三极管（BJT）",
+      "aliases": ["三极管", "Transistor", "BJT", "9013", "MMBT3904"],
+      "description": "双极型晶体管，电流控制器件，用于放大与开关，参数关注 hFE、Vceo 与集电极功耗",
+      "keywords": [
+        { "k": "三极管", "w": 5 }, { "k": "bjt", "w": 5 }, { "k": "npn", "w": 4 }, { "k": "pnp", "w": 4 },
+        { "k": "mmbt", "w": 3 }, { "k": "9013", "w": 3 }, { "k": "s8050", "w": 3 }, { "k": "hfe", "w": 2 }
+      ],
+      "negatives": ["mosfet", "场效应", "igbt"],
+      "samples": ["TRA NPN MMBT3904 SOT-23 hFE 100-300", "三极管 9013 NPN 25V 0.5A TO-92"]
+    },
+    {
+      "code": "TRA_MOSFET", "parent": "TRA", "name": "MOSFET",
+      "aliases": ["场效应管", "MOS", "NMOS", "PMOS"],
+      "description": "电压控制型场效应晶体管，导通电阻 Rds(on) 决定损耗，用于开关电源与驱动，栅极静电敏感",
+      "keywords": [
+        { "k": "tra nmos", "w": 4 }, { "k": "tra pmos", "w": 4 }, { "k": "mosfet", "w": 5 }, { "k": "场效应", "w": 5 }, { "k": "nmos", "w": 4 }, { "k": "pmos", "w": 4 },
+        { "k": "rds(on)", "w": 4 }, { "k": "vgs", "w": 2 }, { "k": "si2302", "w": 3 }
+      ],
+      "negatives": ["三极管", "bjt", "igbt"],
+      "samples": ["TRA NMOS SI2302 SOT-23 20V 2.5A Rds(on)=60mΩ", "MOSFET P沟道 -30V/-4A SOP-8"]
+    },
+    {
+      "code": "TRA_IGBT", "parent": "TRA", "name": "IGBT",
+      "aliases": ["绝缘栅双极晶体管", "IGBT管"],
+      "description": "结合 MOSFET 栅极与 BJT 通流能力的功率器件，用于电机驱动与逆变，关断有拖尾电流",
+      "keywords": [
+        { "k": "igbt", "w": 5 }, { "k": "绝缘栅双极", "w": 5 }, { "k": "逆变", "w": 2 }
+      ],
+      "negatives": ["mosfet", "三极管"],
+      "samples": ["IGBT 600V 20A TO-247", "IGBT模块 1200V/50A 半桥"]
+    },
+    {
+      "code": "IC_ANALOG", "parent": "IC", "name": "模拟IC",
+      "aliases": ["运放", "比较器", "基准源", "Analog IC", "OpAmp"],
+      "description": "处理连续信号的集成电路，包括运算放大器、比较器、电压基准、模拟开关等，关注失调、带宽与噪声",
+      "keywords": [
+        { "k": "运放", "w": 5 }, { "k": "opamp", "w": 5 }, { "k": "运算放大器", "w": 5 },
+        { "k": "比较器", "w": 4 }, { "k": "基准", "w": 3 }, { "k": "lm358", "w": 4 }, { "k": "tl072", "w": 3 }
+      ],
+      "negatives": ["mcu", "单片机", "存储", "flash"],
+      "samples": ["IC OPAMP LM358 SOIC-8 双运放", "模拟IC 精密基准 2.5V ±0.1% SOT-23"]
+    },
+    {
+      "code": "IC_DIGITAL", "parent": "IC", "name": "数字IC（逻辑/MCU/DSP）",
+      "aliases": ["单片机", "MCU", "逻辑IC", "处理器", "STM32"],
+      "description": "以数字逻辑为核心的集成电路，含 MCU、FPGA、逻辑门、驱动芯片等，关注主频、IO 数量与供电电压",
+      "keywords": [
+        { "k": "mcu", "w": 5 }, { "k": "单片机", "w": 5 }, { "k": "stm32", "w": 5 }, { "k": "dsp", "w": 4 },
+        { "k": "逻辑", "w": 4 }, { "k": "74hc", "w": 4 }, { "k": "fpga", "w": 4 }, { "k": "gpio", "w": 2 }, { "k": "arm", "w": 2 }
+      ],
+      "negatives": ["存储", "flash", "运放", "ldo"],
+      "samples": ["IC MCU STM32F103C8T6 LQFP-48 72MHz", "单片机 8位 SOP-20 16MHz"]
+    },
+    {
+      "code": "IC_MEMORY", "parent": "IC", "name": "存储器",
+      "aliases": ["Flash", "EEPROM", "DRAM", "SRAM", "存储芯片"],
+      "description": "数据存储器件，含 NOR/NAND Flash、EEPROM、SRAM、DRAM，关注容量、接口与擦写寿命",
+      "keywords": [
+        { "k": "flash", "w": 5 }, { "k": "eeprom", "w": 5 }, { "k": "存储", "w": 4 },
+        { "k": "ddr", "w": 4 }, { "k": "sram", "w": 4 }, { "k": "nand", "w": 5 }, { "k": "at24c", "w": 4 }
+      ],
+      "negatives": ["mcu", "单片机"],
+      "samples": ["IC FLASH W25Q64 64Mbit SOP-8 SPI", "EEPROM AT24C02 2Kbit I2C"]
+    },
+    {
+      "code": "IC_POWER", "parent": "IC", "name": "电源管理IC",
+      "aliases": ["LDO", "DCDC", "稳压器", "电源芯片", "PMIC"],
+      "description": "电源转换与管理芯片，含 LDO、开关稳压器、充电管理与负载开关，关注效率、压差与散热",
+      "keywords": [
+        { "k": "ldo", "w": 5 }, { "k": "dcdc", "w": 5 }, { "k": "dc-dc", "w": 5 }, { "k": "稳压器", "w": 4 },
+        { "k": "电源管理", "w": 5 }, { "k": "ams1117", "w": 4 }, { "k": "buck", "w": 3 }, { "k": "boost", "w": 3 }
+      ],
+      "negatives": ["模块", "mcu", "运放"],
+      "samples": ["IC LDO AMS1117-3.3 SOT-223 800mA", "电源管理IC 同步降压 5V/3A QFN-16"]
+    },
+    {
+      "code": "IC_OPTO", "parent": "IC", "name": "光耦/光电隔离器件",
+      "aliases": ["光耦", "Optocoupler", "光电隔离", "PC817"],
+      "description": "以光为媒介实现电气隔离的器件，含光耦、光电继电器、隔离驱动，关注电流传输比 CTR 与隔离电压",
+      "keywords": [
+        { "k": "光耦", "w": 5 }, { "k": "optocoupler", "w": 5 }, { "k": "光电隔离", "w": 5 },
+        { "k": "pc817", "w": 4 }, { "k": "ctr", "w": 3 }, { "k": "隔离电压", "w": 3 }
+      ],
+      "negatives": ["led", "发光二极管"],
+      "samples": ["IC OPTO PC817 DIP-4 CTR 50-600%", "光耦 高速 10Mbit/s SOP-5 隔离5kV"]
+    },
+    {
+      "code": "CONN_BOARD", "parent": "CONN", "name": "板对板连接器",
+      "aliases": ["BTB", "板对板", "排针排母", "Board to Board"],
+      "description": "两块 PCB 之间直连的连接器，含排针排母、板对板插座，关注针数、间距与插拔寿命",
+      "keywords": [
+        { "k": "板对板", "w": 5 }, { "k": "排针", "w": 4 }, { "k": "排母", "w": 4 },
+        { "k": "btb", "w": 5 }, { "k": "2.54mm", "w": 3 }, { "k": "pin header", "w": 4 }
+      ],
+      "negatives": ["线对板", "端子", "usb", "rj45"],
+      "samples": ["CONN BTB 2×10P 2.54mm 排针排母", "板对板连接器 0.5mm间距 30P"]
+    },
+    {
+      "code": "CONN_WIRE", "parent": "CONN", "name": "线对板连接器",
+      "aliases": ["线对板", "WAF", "XH2.54", "杜邦"],
+      "description": "线束与 PCB 之间的连接器，含 XH/VH/PH 系列、杜邦、USB、RJ45 等，关注额定电流与端子材料",
+      "keywords": [
+        { "k": "线对板", "w": 5 }, { "k": "xh2.54", "w": 5 }, { "k": "usb", "w": 4 },
+        { "k": "rj45", "w": 4 }, { "k": "杜邦", "w": 3 }, { "k": "type-c", "w": 4 }, { "k": "ph2.0", "w": 4 }
+      ],
+      "negatives": ["板对板", "排针"],
+      "samples": ["CONN XH2.54 4P 线对板 卧式", "USB Type-C 16P 母座 贴片"]
+    },
+    {
+      "code": "CONN_TERMINAL", "parent": "CONN", "name": "端子/接线柱",
+      "aliases": ["端子", "接线端子", "Terminal Block", "KF301"],
+      "description": "用于导线紧固连接的端子排与接线柱，关注额定电流、螺钉扭矩与间距",
+      "keywords": [
+        { "k": "端子", "w": 5 }, { "k": "接线柱", "w": 5 }, { "k": "terminal block", "w": 5 },
+        { "k": "kf301", "w": 4 }, { "k": "凤凰端子", "w": 4 }, { "k": "间距5.08", "w": 3 }
+      ],
+      "negatives": ["板对板", "usb"],
+      "samples": ["TERMINAL KF301-2P 5.08mm 接线端子", "接线柱 M4 30A 黄铜"]
+    },
+    {
+      "code": "XTAL", "parent": "XTAL_G", "name": "无源晶振",
+      "aliases": ["晶振", "Crystal", "石英晶体"],
+      "description": "利用石英压电效应产生稳定频率的无源器件，需配合起振电容，关注频差（ppm）与负载电容",
+      "keywords": [
+        { "k": "晶振", "w": 4 }, { "k": "crystal", "w": 4 }, { "k": "无源晶振", "w": 5 },
+        { "k": "mhz", "w": 3 }, { "k": "ppm", "w": 3 }, { "k": "负载电容", "w": 3 }
+      ],
+      "negatives": ["有源", "振荡器", "oscillator"],
+      "samples": ["XTAL 8MHz 20ppm 负载电容12pF HC-49S", "无源晶振 32.768kHz ±20ppm"]
+    },
+    {
+      "code": "OSC", "parent": "XTAL_G", "name": "有源晶振",
+      "aliases": ["有源晶振", "Oscillator", "时钟源", "TCXO"],
+      "description": "内置振荡电路、直接输出时钟的器件，需供电，关注频率稳定度与相位噪声",
+      "keywords": [
+        { "k": "有源晶振", "w": 5 }, { "k": "oscillator", "w": 5 }, { "k": "tcxo", "w": 5 },
+        { "k": "时钟源", "w": 4 }, { "k": "osc", "w": 3 }
+      ],
+      "negatives": ["无源", "crystal"],
+      "samples": ["OSC 25MHz 3.3V ±25ppm 有源晶振 3225", "TCXO 10MHz 温补晶振"]
+    },
+    {
+      "code": "FUSE", "parent": "FUSE_G", "name": "保险丝",
+      "aliases": ["Fuse", "熔断器", "自恢复保险丝", "PTC"],
+      "description": "过流保护元件，分一次性熔断与自恢复（PTC）两类，选型需按 1.3~1.5 倍降额并考虑熔断时间",
+      "keywords": [
+        { "k": "保险丝", "w": 5 }, { "k": "保险管", "w": 5 }, { "k": "fuse", "w": 5 }, { "k": "熔断", "w": 4 },
+        { "k": "自恢复", "w": 4 }, { "k": "ptc", "w": 3 }
+      ],
+      "negatives": ["电阻", "电感"],
+      "samples": ["FUSE 2A 250V 慢断 5×20mm", "自恢复保险丝 PTC 0.5A 1812"]
+    },
+    {
+      "code": "RELAY", "parent": "RELAY_G", "name": "继电器",
+      "aliases": ["Relay", "电磁继电器", "固态继电器", "SSR"],
+      "description": "用电磁或半导体方式实现触点通断的开关器件，关注触点容量、电气寿命次数与线圈电压",
+      "keywords": [
+        { "k": "继电器", "w": 5 }, { "k": "relay", "w": 5 }, { "k": "触点", "w": 3 },
+        { "k": "线圈", "w": 3 }, { "k": "ssr", "w": 4 }, { "k": "hk4100", "w": 3 }
+      ],
+      "negatives": ["开关电源", "按键"],
+      "samples": ["RELAY 5V 10A 1常开 电气寿命10万次", "固态继电器 SSR 25A 24-380VAC"]
+    },
+    {
+      "code": "SWITCH", "parent": "SWITCH_G", "name": "开关/按键",
+      "aliases": ["轻触开关", "按键", "拨动开关", "Tact Switch"],
+      "description": "机械式通断操作件，含轻触按键、拨动/船型开关，关注动作力、行程与机械寿命次数",
+      "keywords": [
+        { "k": "switch", "w": 3 }, { "k": "轻触", "w": 5 }, { "k": "按键", "w": 4 }, { "k": "拨动开关", "w": 5 }, { "k": "拨动", "w": 4 },
+        { "k": "船型", "w": 5 }, { "k": "tact", "w": 4 }, { "k": "动作力", "w": 3 }
+      ],
+      "negatives": ["继电器", "保险丝"],
+      "samples": ["SWITCH 轻触 6×6×5mm 动作力160gf 寿命10万次", "船型开关 KCD1 2档 6A"]
+    },
+    {
+      "code": "LED", "parent": "LED_G", "name": "LED",
+      "aliases": ["发光二极管", "指示灯", "Light Emitting Diode"],
+      "description": "电致发光二极管，用作指示或照明，关注正向电流、光通维持率（L70）与结温",
+      "keywords": [
+        { "k": "led", "w": 4.5 }, { "k": "发光二极管", "w": 5 }, { "k": "指示灯", "w": 4 }, { "k": "蓝光", "w": 2 }, { "k": "绿光", "w": 2 }, { "k": "红光", "w": 2 },
+        { "k": "l70", "w": 4 }, { "k": "光通", "w": 3 }, { "k": "色温", "w": 3 }
+      ],
+      "negatives": ["光耦", "光电隔离", "tvs"],
+      "samples": ["LED 0805 红光 20mA Vf=2.0V", "照明LED 1W 3000K L70>25000h"]
+    },
+    {
+      "code": "MODULE_POWER", "parent": "MODULE", "name": "电源模块",
+      "aliases": ["AC-DC模块", "DC-DC模块", "电源砖", "Power Module"],
+      "description": "成品电源转换模块，输入输出已隔离，含 AC-DC 与 DC-DC 砖，按负载率选型并关注内部电容寿命",
+      "keywords": [
+        { "k": "pwr module", "w": 5 }, { "k": "电源模块", "w": 5 }, { "k": "ac-dc", "w": 3 }, { "k": "dc-dc", "w": 3 }, { "k": "dc-dc模块", "w": 5 },
+        { "k": "power module", "w": 4 }, { "k": "隔离电源", "w": 3 }
+      ],
+      "negatives": ["ldo", "稳压器", "芯片"],
+      "samples": ["PWR MODULE AC-DC 5V 10W 隔离", "DC-DC模块 24V转12V 20W"]
+    },
+    {
+      "code": "MODULE_RF", "parent": "MODULE", "name": "射频/通信模组",
+      "aliases": ["RF模块", "无线模块", "WiFi模块", "蓝牙模块"],
+      "description": "集成射频收发与协议的模组，含 WiFi/蓝牙/LoRa/4G，关注发射功率、频段与认证",
+      "keywords": [
+        { "k": "wifi", "w": 5 }, { "k": "蓝牙", "w": 5 }, { "k": "lora", "w": 5 },
+        { "k": "射频", "w": 4 }, { "k": "4g", "w": 3 }, { "k": "模组", "w": 3 }, { "k": "天线", "w": 2 }
+      ],
+      "negatives": ["电源模块"],
+      "samples": ["RF MODULE WiFi 2.4G 802.11b/g/n 板载天线", "蓝牙模组 BLE5.0 12dBm"]
+    },
+    {
+      "code": "FAN", "parent": "EM", "name": "风扇",
+      "aliases": ["散热风扇", "Fan", "轴流风机", "鼓风机"],
+      "description": "机电散热件，含轴承（含油/滚珠）与电机，寿命以 L10 表示，灰尘与温度显著影响寿命",
+      "keywords": [
+        { "k": "风扇", "w": 5 }, { "k": "fan", "w": 5 }, { "k": "散热风机", "w": 5 },
+        { "k": "l10", "w": 4 }, { "k": "轴流", "w": 4 }, { "k": "rpm", "w": 2 }
+      ],
+      "negatives": ["散热器", "散热片"],
+      "samples": ["FAN 4010 5V 0.1A 6000RPM L10=30000h@40℃", "散热风扇 80×80×25 12V 双滚珠"]
+    },
+    {
+      "code": "PCB", "parent": "EM", "name": "PCB 板",
+      "aliases": ["印制板", "线路板", "PCB", "PCBA"],
+      "description": "承载并互连元件的基板，关注层数、板材（FR-4）、表面处理与过孔可靠性",
+      "keywords": [
+        { "k": "pcb", "w": 5 }, { "k": "线路板", "w": 5 }, { "k": "印制板", "w": 5 },
+        { "k": "fr-4", "w": 4 }, { "k": "层板", "w": 4 }, { "k": "沉金", "w": 3 }
+      ],
+      "negatives": ["元件", "连接器"],
+      "samples": ["PCB FR-4 4层 1.6mm 沉金 无铅", "线路板 双面板 1.6mm HASL"]
+    },
+    {
+      "code": "SOLDER", "parent": "EM", "name": "焊点",
+      "aliases": ["焊点", "Solder Joint", "焊接点"],
+      "description": "元件与 PCB 的机械与电气连接点，热循环疲劳（温循裂纹）是主要失效机理，按点数计",
+      "keywords": [
+        { "k": "焊点", "w": 5 }, { "k": "solder joint", "w": 5 }, { "k": "无铅焊", "w": 4 }
+      ],
+      "negatives": [],
+      "samples": ["SOLDER 焊点 无铅 SAC305 数量按元件引脚计"]
+    }
+  ]
+}

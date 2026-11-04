@@ -1,0 +1,21 @@
+# 统一换行符，避免 Windows / macOS / Linux 之间来回提交产生假 diff
+* text=auto eol=lf
+
+# Windows 批处理必须是精确的 CRLF 字节流（start.bat / pack.bat 还是 GBK 编码），
+# 交给 git 转换会破坏 cmd 解析，所以标记为「不做任何转换」
+*.bat -text
+*.cmd -text
+
+# 二进制资源不做换行转换
+*.zip   binary
+*.png   binary
+*.jpg   binary
+*.jpeg  binary
+*.gif   binary
+*.ico   binary
+*.ttf   binary
+*.otf   binary
+*.woff  binary
+*.woff2 binary
+*.pdf   binary
+*.db    binary

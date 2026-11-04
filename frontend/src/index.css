@@ -1,0 +1,20 @@
+/* 全局基础样式：只做必要的事——中文字体、表格密度、滚动条 */
+html, body, #root { height: 100%; margin: 0; }
+body {
+  font-family: -apple-system, 'Segoe UI', 'Microsoft YaHei', 'PingFang SC', sans-serif;
+  color: #1f2329;
+  background: #f5f7fb;
+}
+::-webkit-scrollbar { width: 9px; height: 9px; }
+::-webkit-scrollbar-thumb { background: #c9d2e0; border-radius: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+
+.mono { font-family: 'Cascadia Mono', Consolas, 'Courier New', monospace; }
+.muted { color: #8c8c8c; }
+.nowrap { white-space: nowrap; }
+
+/* 打印友好：报告页可被浏览器直接另存为 PDF */
+@media print {
+  .ant-layout-sider, .ant-layout-header, .no-print { display: none !important; }
+  .ant-layout-content { padding: 0 !important; }
+}

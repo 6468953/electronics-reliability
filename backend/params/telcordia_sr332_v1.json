@@ -1,0 +1,116 @@
+{
+  "standard": "TELCORDIA_SR332",
+  "version_tag": "v1.0",
+  "display_name": "Telcordia SR-332（通信设备可靠性预计，Issue 4）",
+  "source_ref": "Telcordia SR-332 Issue 4 (2016) — Method I（Parts Count / Black Box）稳态失效率模型；π 因子定义见 Issue 4 Sec.6~Sec.8",
+  "disclaimer": "本参数库为【示例数据，仅供演示/学习】：λ_G 取公开文献中的典型量级，未逐表抄录 SR-332 原值；π_Q、π_E 采用标准常用档位。正式使用请以标准原表替换。",
+  "notes": {
+    "method": "本实现对应 Method I（零件计数/黑盒法）：λ_SS = λ_G × π_T × π_Q × π_S × π_E。Method II（实验室数据）与 Method III（现场数据）需要实测数据，本系统不实现。",
+    "lambda_g": "Telcordia 的基础失效率 λ_G，单位 FIT。注意：它与 MIL-217F 的 λ_g 不是同一个量（建模口径不同），所以两套库必须分别维护、不能混用。这也是「双标准对比」有意义的原因。",
+    "confidence": "SR-332 报出的失效率通常配「置信度上限」。V1 采用 90% 置信度系数 1.0（未做统计修正），界面会明确标注，避免读者误以为是置信上限。",
+    "aging": "SR-332 的老化因子（π_CV / 学习曲线）描述「随累计通电时间增加、早期缺陷退场后失效率下降」的现象。V1 不启用（乘 1.0），仅保留结构，可在 UI 侧以参数形式打开。",
+    "pi_s": "应力因子 π_S：Telcordia 中电应力对失效率有温和影响，缺省 1.0（不提供电应力数据时不修正）。"
+  },
+  "engine_version": "1.0.0",
+  "confidence_factor_90": 1.0,
+  "aging_factor_enabled": false,
+  "environments": {
+    "GB": { "label": "地面固定 GB（机房/室内机柜）", "mult": 1.0 },
+    "GF": { "label": "地面移动（车载/移动使用）", "mult": 2.0 },
+    "GM": { "label": "地面便携", "mult": 3.0 },
+    "MP": { "label": "车载（振动环境）", "mult": 4.0 },
+    "NS": { "label": "舰船/沿海（盐雾）", "mult": 5.0 },
+    "AIC": { "label": "机载有控", "mult": 6.0 },
+    "ARW": { "label": "机载无人", "mult": 10.0 },
+    "SF": { "label": "航天", "mult": 16.0 },
+    "C": { "label": "受控环境（恒温机房）", "mult": 0.7 }
+  },
+  "quality_levels": {
+    "commercial": { "label": "商用级（无筛选/一般供应商）", "pi_q": 2.0 },
+    "industrial": { "label": "工业级（有来料筛选）", "pi_q": 1.0 },
+    "automotive": { "label": "车规级（AEC 认证）", "pi_q": 0.7 },
+    "military": { "label": "军品级（全筛+可靠性试验）", "pi_q": 0.5 }
+  },
+  "families": {
+    "cap_electrolytic": {
+      "parts_stress": { "pi_T": { "formula": "arrhenius", "ea_ev": 0.35, "ref_temp_c": 40.0 }, "default_delta_t_c": 5.0 }
+    },
+    "cap_film_ceramic": {
+      "parts_stress": { "pi_T": { "formula": "arrhenius", "ea_ev": 0.3, "ref_temp_c": 40.0 }, "default_delta_t_c": 3.0 }
+    },
+    "resistor": {
+      "parts_stress": { "pi_T": { "formula": "arrhenius", "ea_ev": 0.2, "ref_temp_c": 40.0 }, "default_delta_t_c": 5.0 }
+    },
+    "inductor": {
+      "parts_stress": { "pi_T": { "formula": "arrhenius", "ea_ev": 0.25, "ref_temp_c": 40.0 }, "default_delta_t_c": 8.0 }
+    },
+    "diode": {
+      "parts_stress": { "pi_T": { "formula": "arrhenius", "ea_ev": 0.3, "ref_temp_c": 40.0 }, "default_delta_t_c": 10.0 }
+    },
+    "transistor": {
+      "parts_stress": { "pi_T": { "formula": "arrhenius", "ea_ev": 0.35, "ref_temp_c": 40.0 }, "default_delta_t_c": 15.0 }
+    },
+    "ic": {
+      "parts_stress": { "pi_T": { "formula": "arrhenius", "ea_ev": 0.35, "ref_temp_c": 40.0 }, "default_delta_t_c": 10.0 }
+    },
+    "connector": {
+      "parts_stress": { "pi_T": { "formula": "arrhenius", "ea_ev": 0.2, "ref_temp_c": 40.0 }, "default_delta_t_c": 2.0 }
+    },
+    "electromechanical": {
+      "parts_stress": { "pi_T": { "formula": "arrhenius", "ea_ev": 0.4, "ref_temp_c": 40.0 }, "default_delta_t_c": 10.0 }
+    },
+    "pcb_solder": {
+      "parts_stress": { "pi_T": { "formula": "arrhenius", "ea_ev": 0.2, "ref_temp_c": 40.0 }, "default_delta_t_c": 0.0 }
+    }
+  },
+  "categories": {
+    "CAP_ALU": { "name": "铝电解电容", "group": "电容", "family": "cap_electrolytic", "lambda_g": 0.9 },
+    "CAP_CER": { "name": "陶瓷电容（MLCC）", "group": "电容", "family": "cap_film_ceramic", "lambda_g": 0.12 },
+    "CAP_FILM": { "name": "薄膜电容", "group": "电容", "family": "cap_film_ceramic", "lambda_g": 0.15 },
+    "CAP_TANT": { "name": "钽电容", "group": "电容", "family": "cap_film_ceramic", "lambda_g": 0.3 },
+
+    "RES_THICK": { "name": "厚膜贴片电阻", "group": "电阻", "family": "resistor", "lambda_g": 0.08 },
+    "RES_METAL_FILM": { "name": "金属膜电阻", "group": "电阻", "family": "resistor", "lambda_g": 0.07 },
+    "RES_WIREWOUND": { "name": "线绕电阻", "group": "电阻", "family": "resistor", "lambda_g": 0.18 },
+    "RES_POT": { "name": "电位器/可调电阻", "group": "电阻", "family": "electromechanical", "lambda_g": 0.5 },
+
+    "IND_CHIP": { "name": "贴片电感", "group": "电感", "family": "inductor", "lambda_g": 0.12 },
+    "IND_POWER": { "name": "功率电感", "group": "电感", "family": "inductor", "lambda_g": 0.3 },
+    "IND_COMMON": { "name": "共模/滤波电感", "group": "电感", "family": "inductor", "lambda_g": 0.25 },
+
+    "DIO_RECT": { "name": "整流二极管", "group": "二极管", "family": "diode", "lambda_g": 0.1 },
+    "DIO_SBD": { "name": "肖特基二极管", "group": "二极管", "family": "diode", "lambda_g": 0.12 },
+    "DIO_ZENER": { "name": "稳压二极管", "group": "二极管", "family": "diode", "lambda_g": 0.15 },
+    "DIO_TVS": { "name": "TVS/瞬态抑制二极管", "group": "二极管", "family": "diode", "lambda_g": 0.18 },
+
+    "TRA_BJT": { "name": "三极管（BJT）", "group": "晶体管", "family": "transistor", "lambda_g": 0.12 },
+    "TRA_MOSFET": { "name": "MOSFET", "group": "晶体管", "family": "transistor", "lambda_g": 0.2 },
+    "TRA_IGBT": { "name": "IGBT", "group": "晶体管", "family": "transistor", "lambda_g": 0.5 },
+
+    "IC_ANALOG": { "name": "模拟IC", "group": "IC", "family": "ic", "lambda_g": 0.35 },
+    "IC_DIGITAL": { "name": "数字IC（逻辑/MCU/DSP）", "group": "IC", "family": "ic", "lambda_g": 0.7 },
+    "IC_MEMORY": { "name": "存储器", "group": "IC", "family": "ic", "lambda_g": 0.5 },
+    "IC_POWER": { "name": "电源管理IC", "group": "IC", "family": "ic", "lambda_g": 0.6 },
+    "IC_OPTO": { "name": "光耦/光电隔离器件", "group": "IC", "family": "ic", "lambda_g": 0.45 },
+
+    "CONN_BOARD": { "name": "板对板连接器", "group": "连接器", "family": "connector", "lambda_g": 0.1 },
+    "CONN_WIRE": { "name": "线对板连接器", "group": "连接器", "family": "connector", "lambda_g": 0.18 },
+    "CONN_TERMINAL": { "name": "端子/接线柱", "group": "连接器", "family": "connector", "lambda_g": 0.18 },
+
+    "XTAL": { "name": "无源晶振", "group": "晶振", "family": "ic", "lambda_g": 0.25 },
+    "OSC": { "name": "有源晶振", "group": "晶振", "family": "ic", "lambda_g": 0.4 },
+
+    "FUSE": { "name": "保险丝", "group": "保险丝", "family": "pcb_solder", "lambda_g": 0.12 },
+    "RELAY": { "name": "继电器", "group": "继电器", "family": "electromechanical", "lambda_g": 1.2 },
+    "SWITCH": { "name": "开关/按键", "group": "开关", "family": "electromechanical", "lambda_g": 0.7 },
+
+    "LED": { "name": "LED", "group": "LED", "family": "diode", "lambda_g": 0.2 },
+
+    "MODULE_POWER": { "name": "电源模块", "group": "模组", "family": "ic", "lambda_g": 2.0 },
+    "MODULE_RF": { "name": "射频/通信模组", "group": "模组", "family": "ic", "lambda_g": 2.0 },
+
+    "FAN": { "name": "风扇", "group": "机电件", "family": "electromechanical", "lambda_g": 2.5 },
+    "PCB": { "name": "PCB 板", "group": "机电件", "family": "pcb_solder", "lambda_g": 0.06 },
+    "SOLDER": { "name": "焊点", "group": "机电件", "family": "pcb_solder", "lambda_g": 0.006 }
+  }
+}

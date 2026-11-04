@@ -1,0 +1,172 @@
+{
+ "standard": "WEAR",
+ "version_tag": "v1.0",
+ "display_name": "磨损机理寿命模型库",
+ "source_ref": "电解电容寿命公式见各厂商应用手册（如 Chemi-Con / Nichicon「寿命推算」章节）；风扇 L10 见 GB/T 5089 与轴承润滑脂寿命工程近似；LED L70 见 LM-80 / TM-21 与 Arrhenius 加速模型；继电器/连接器寿命取厂商 datasheet 的电气/机械寿命次数",
+ "disclaimer": "模型形式为业界通行工程近似，参数为【示例默认值，仅供演示/学习】。真实评估必须用本机料号的 datasheet 值替换，缺数据时系统会走保守默认值并在报告中标注。",
+ "notes": {
+  "why": "MTBF 只描述随机失效（指数分布），它回答「多久坏一次」，不回答「能用多久」。整机可用寿命往往由少数磨损机理决定：电解液干涸、轴承润滑脂耗尽、触点烧蚀、荧光粉/芯片光衰、镀层磨穿。所以模块五必须独立计算，并与 MTBF 结果并排给出。",
+  "double_every_10c": "10°C 法则：温度每降低 10°C，化学反应速率约减半，故寿命翻倍。这是电解电容寿命推算的通用工程近似（Arrhenius 在 Ea≈0.6eV 时的特例）。",
+  "conservative_default": "缺数据时取「保守默认值」：假设额定寿命较短、额定温度较低，使估算结果偏悲观。宁可报低了让人去核实，也不要报高了让人误以为安全。",
+  "duty": "所有寿命按「通电小时」计算，折算年限时除以 日通电时长 × 365。间断工作的设备，日历年限会比通电年限长得多。",
+  "daily_ops": "动作次数类模型（继电器/开关/连接器）对「日动作次数」极其敏感：同一个 10 万次的继电器，按 60 次/日算是 4.6 年，按 200 次/日是 1.4 年。所以这类输入必须由使用场景给出，默认值仅作演示；报告中应把它列为「关键假设」并要求核实。"
+ },
+ "models": {
+  "CAP_ALU": {
+   "mechanism": "electrolytic_dryout",
+   "label": "电解液干涸",
+   "model": "double_every_10c",
+   "formula": "L = L0 × 2^((T_max_rated − T_op)/10) × K_V",
+   "params": {
+    "L0_default_h": 2000,
+    "temp_max_default_c": 105,
+    "voltage_derate_ref": 0.8,
+    "voltage_penalty_per_unit": 3.5,
+    "voltage_floor": 0.3
+   },
+   "field_map": {
+    "life_h": "life_h",
+    "temp_max_c": "temp_max_c",
+    "voltage": "voltage_rated"
+   },
+   "note": "K_V 为电压修正：工作电压 ≤ 额定 80% 时取 1.0（视为已充分降额）；超过 80% 后每超出 10% 寿命打折 35%，最低 0.3 倍。这是对「过压加速干涸」的线性近似，非标准公式。"
+  },
+  "CAP_FILM": {
+   "mechanism": "film_self_healing",
+   "label": "薄膜自愈损耗",
+   "model": "double_every_10c",
+   "formula": "L = L0 × 2^((T_max_rated − T_op)/10)",
+   "params": {
+    "L0_default_h": 100000,
+    "temp_max_default_c": 105
+   },
+   "field_map": {
+    "life_h": "life_h",
+    "temp_max_c": "temp_max_c"
+   },
+   "note": "薄膜电容寿命通常很长（10 万小时量级），一般不构成整机短板；列在此处是为了对比说明「为什么整机短板往往是电解电容而不是薄膜电容」。"
+  },
+  "FAN": {
+   "mechanism": "fan_bearing_L10",
+   "label": "轴承润滑脂耗尽（L10）",
+   "model": "double_every_10c",
+   "formula": "L10 = L10_ref × 2^((T_ref − T_op)/10)",
+   "params": {
+    "L10_ref_h": 30000,
+    "temp_ref_c": 40,
+    "temp_op_default_c": 45
+   },
+   "field_map": {
+    "L10_h": "l10_h",
+    "temp_ref_c": "temp_ref_c"
+   },
+   "note": "L10 = 10% 的样本失效时的运行小时数（B10 寿命），是风扇行业的标准指标。温度修正采用润滑脂寿命每升 10°C 减半的工程近似；真实曲线应查厂商 P-Q 曲线与 MTF 表。"
+  },
+  "RELAY": {
+   "mechanism": "relay_contact",
+   "label": "触点电气寿命",
+   "model": "cycle_count",
+   "formula": "years = 额定动作次数 / (日动作次数 × 365)",
+   "params": {
+    "rated_cycles_default": 100000,
+    "daily_ops_default": 10
+   },
+   "field_map": {
+    "rated_cycles": "cycles",
+    "daily_ops": "daily_ops"
+   },
+   "note": "取电气寿命（带载动作次数）而非机械寿命（空载），因为带载分断会产生电弧烧蚀，通常低一个数量级。日动作次数需按实际使用场景填写，默认 10 次/日只是演示假设。"
+  },
+  "SWITCH": {
+   "mechanism": "switch_contact",
+   "label": "开关/按键动作寿命",
+   "model": "cycle_count",
+   "formula": "years = 额定动作次数 / (日动作次数 × 365)",
+   "params": {
+    "rated_cycles_default": 100000,
+    "daily_ops_default": 20
+   },
+   "field_map": {
+    "rated_cycles": "cycles",
+    "daily_ops": "daily_ops"
+   },
+   "note": "轻触按键通常 10 万~50 万次，拨动开关 1 万~3 万次。默认值取中等偏保守。"
+  },
+  "CONN_BOARD": {
+   "mechanism": "connector_mate",
+   "label": "连接器插拔寿命",
+   "model": "cycle_count",
+   "formula": "years = 额定插拔次数 / (日插拔次数 × 365)",
+   "params": {
+    "rated_cycles_default": 30,
+    "daily_ops_default": 0.002
+   },
+   "field_map": {
+    "rated_cycles": "cycles",
+    "daily_ops": "daily_ops"
+   },
+   "note": "板对板连接器在整机寿命内通常只在装配（及返修）时插合，额定 30 次是常见 datasheet 值。故默认日插拔次数取 0.002（约每 500 天一次），代表「装配一次 + 偶尔维护」。缺省值偏保守，但不会像「按 0.05 次/日」那样把寿命算成 1.6 年这种不切实际的结论。"
+  },
+  "CONN_WIRE": {
+   "mechanism": "connector_mate",
+   "label": "连接器插拔寿命",
+   "model": "cycle_count",
+   "formula": "years = 额定插拔次数 / (日插拔次数 × 365)",
+   "params": {
+    "rated_cycles_default": 100,
+    "daily_ops_default": 0.005
+   },
+   "field_map": {
+    "rated_cycles": "cycles",
+    "daily_ops": "daily_ops"
+   },
+   "note": "线对板连接器寿命略高于板对板，常见 100~200 次。"
+  },
+  "CONN_TERMINAL": {
+   "mechanism": "connector_mate",
+   "label": "端子紧固/拆装寿命",
+   "model": "cycle_count",
+   "formula": "years = 额定拆装次数 / (日拆装次数 × 365)",
+   "params": {
+    "rated_cycles_default": 50,
+    "daily_ops_default": 0.01
+   },
+   "field_map": {
+    "rated_cycles": "cycles",
+    "daily_ops": "daily_ops"
+   },
+   "note": "螺钉端子的实际限制常是「扭矩衰减」而非次数，此处仅作量级估算。"
+  },
+  "LED": {
+   "mechanism": "led_lumen",
+   "label": "光通维持率衰减（L70）",
+   "model": "arrhenius",
+   "formula": "L70 = L70_ref × exp( (Ea/k) × (1/T_op − 1/T_ref) )",
+   "params": {
+    "L70_ref_h": 25000,
+    "temp_ref_c": 85,
+    "ea_ev": 0.5,
+    "temp_op_default_c": 55
+   },
+   "field_map": {
+    "L70_h": "l70_h"
+   },
+   "note": "L70 = 光通量衰减到初始值 70% 的时间，是照明行业定义「寿命终点」的通行口径（不是「不亮了」）。Ea 取 0.5eV 为工程中值，实际应由 LM-80 数据拟合；无实测数据时结论只能当量级参考。"
+  },
+  "MODULE_POWER": {
+   "mechanism": "module_cap_dryout",
+   "label": "内部电解电容干涸（模组级）",
+   "model": "double_every_10c",
+   "formula": "L = L0 × 2^((T_max_rated − T_op)/10)",
+   "params": {
+    "L0_default_h": 50000,
+    "temp_max_default_c": 105
+   },
+   "field_map": {
+    "life_h": "life_h",
+    "temp_max_c": "temp_max_c"
+   },
+   "note": "成品电源模块的寿命瓶颈几乎总是内部电解电容，厂商给出的 MTBF 是随机失效口径，两者不能互相替代。"
+  }
+ }
+}

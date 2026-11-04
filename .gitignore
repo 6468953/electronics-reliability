@@ -1,0 +1,32 @@
+# --- 后端 ---
+backend/.venv/
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+backend/data/reliability.db
+backend/data/reports/*
+backend/data/uploads/*
+!backend/data/reports/.gitkeep
+!backend/data/uploads/.gitkeep
+
+# --- 前端 ---
+frontend/node_modules/
+frontend/tsconfig.tsbuildinfo
+frontend/shots/
+# 注意：frontend/dist 故意不忽略。
+# 它是「一键启动」的运行前提（后端直接托管这些静态文件），
+# 入库后别人 clone 下来双击 start.bat 就能用，不必先装 Node 构建。
+
+# --- 打包相关 ---
+# wheels/ 是可再生的离线依赖缓存（约 39MB），需要时用 pack.bat --with-wheels 重新生成
+wheels/
+发布包/
+*.zip
+
+# --- 其他 ---
+# 工具的会话记录/本地记忆，不属于项目源码
+.workbuddy/
+.DS_Store
+Thumbs.db
+*.log

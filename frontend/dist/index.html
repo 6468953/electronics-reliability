@@ -1,0 +1,101 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <!-- 内联 SVG 图标：省掉一次 favicon.ico 的 404，也免得部署时还要单独托管图片 -->
+    <link
+      rel="icon"
+      href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%231F3864'/%3E%3Cpath d='M8 22V14l4-3 4 3v8' stroke='%2378A9E8' stroke-width='2' fill='none' stroke-linecap='round'/%3E%3Cpath d='M18 22v-5l3-2 3 2v5' stroke='%23F6BD16' stroke-width='2' fill='none' stroke-linecap='round'/%3E%3C/svg%3E"
+    />
+    <title>电子零件可靠性评估系统</title>
+    <script>
+      /*
+       * 双击 index.html 会以 file:// 协议打开。这时页面引用的 /assets/*.js 是按站点根解析的，
+       * 浏览器会去找 file:///C:/assets/... —— 一律 404，用户看到的就是一片白屏；
+       * 即使脚本侥幸加载，去请求 /api/v1/* 也必然报 "Failed to fetch"。
+       * 所以这里在解析阶段就把页面换成一张中文说明页：告诉对方该双击什么。
+       *
+       * 【为什么用 DOM 拼而不是 document.write 一整页 HTML】
+       * Vite 构建时会把资源标签注入到 head 结束前。如果这段脚本里出现 head 的结束标签
+       * 字面量（哪怕只是写在注释里），Vite 会把它当成真正的标签，把资源标签插进字符串
+       * 中间 —— 字符串被撕成两半，注入的脚本的闭合标签还会提前终止外层脚本，
+       * 结果页面上直接印出 "' + '' + ' ' + '" 这种碎片。
+       * 所以这里只拼内容片段、不含 head/body 标签，且全部在 DOMContentLoaded 之后执行。
+       */
+      (function () {
+        if (location.protocol !== 'file:') return;
+        document.addEventListener('DOMContentLoaded', function () {
+          document.title = '请通过 start.bat 启动系统';
+
+          var style = document.createElement('style');
+          style.textContent =
+            'html,body{margin:0;padding:0;background:#f5f7fb;}' +
+            '.bootwarn{max-width:620px;margin:48px auto;padding:32px 36px;background:#fff;' +
+            'border:1px solid #e8edf5;border-radius:10px;box-shadow:0 6px 24px rgba(31,56,100,.06);' +
+            'color:#1f3864;line-height:1.75;' +
+            'font-family:system-ui,-apple-system,"Segoe UI","Microsoft YaHei",sans-serif;}' +
+            '.bootwarn h1{margin:0 0 6px;font-size:20px;}' +
+            '.bootwarn .sub{margin:0 0 20px;color:#8c8c8c;font-size:13px;}' +
+            '.bootwarn .lead{margin:0 0 10px;font-weight:600;}' +
+            '.bootwarn ol{margin:0 0 20px;padding-left:22px;font-size:14px;}' +
+            '.bootwarn code{padding:1px 5px;background:#f0f4fa;border-radius:3px;' +
+            'font-family:Consolas,Menlo,monospace;font-size:12.5px;}' +
+            '.bootwarn .ft{margin:0;padding-top:16px;border-top:1px solid #eef2f8;' +
+            'color:#8c8c8c;font-size:12.5px;}';
+          document.head.appendChild(style);
+
+          var box = document.createElement('div');
+          box.className = 'bootwarn';
+
+          var h1 = document.createElement('h1');
+          h1.textContent = '这个文件不能直接双击打开';
+          box.appendChild(h1);
+
+          var sub = document.createElement('p');
+          sub.className = 'sub';
+          sub.textContent =
+            '你现在是以文件方式（file://）打开的，浏览器在这种方式下无法加载系统页面，也无法访问后端服务。';
+          box.appendChild(sub);
+
+          var lead = document.createElement('p');
+          lead.className = 'lead';
+          lead.textContent = '正确的启动方式：';
+          box.appendChild(lead);
+
+          var steps = [
+            '关掉当前这个标签页；',
+            '回到系统所在的文件夹（本文件往上两级），找到 start.bat；',
+            '双击 start.bat。会弹出一个黑色窗口，它就是这个系统本身，请不要关闭它；',
+            '几秒后浏览器会自动打开 http://127.0.0.1:8000，用 admin / admin123 登录。',
+          ];
+          var ol = document.createElement('ol');
+          steps.forEach(function (t) {
+            var li = document.createElement('li');
+            li.textContent = t;
+            ol.appendChild(li);
+          });
+          box.appendChild(ol);
+
+          var ft = document.createElement('p');
+          ft.className = 'ft';
+          ft.textContent =
+            'macOS / Linux 请在该目录执行 ./start.sh。' +
+            '若双击后窗口一闪而过，说明本机缺少 Python 3.10+，见 README 的环境准备一节。';
+          box.appendChild(ft);
+
+          document.body.innerHTML = '';
+          document.body.appendChild(box);
+        });
+      })();
+    </script>
+    <script type="module" crossorigin src="/assets/index-CDiclDuT.js"></script>
+    <link rel="modulepreload" crossorigin href="/assets/antd-BE8PifBh.js">
+    <link rel="modulepreload" crossorigin href="/assets/react-DVEqKTyW.js">
+    <link rel="modulepreload" crossorigin href="/assets/echarts-Bb6yjXMn.js">
+    <link rel="stylesheet" crossorigin href="/assets/index-B5aVMGGy.css">
+  </head>
+  <body>
+    <div id="root"></div>
+  </body>
+</html>
