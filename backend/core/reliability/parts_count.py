@@ -107,7 +107,10 @@ def assess(
         factor_values = {"pi_E": env_mult}
 
         # ---- Telcordia 额外带温度因子（MIL 计数法不带，这是标准口径差异）----
-        if params.standard == "TELCORDIA_SR332":
+        # 例外：机械件（螺丝/支架/线缆…）没有结温概念，SR-332 也没给它们模型。
+        # 硬套 Arrhenius 会得到一个没有物理意义的乘数，所以按 pi_T_exempt 跳过，
+        # 并在追溯里留一条 "π_T = 1.0（无模型）"，避免用户以为温度对螺丝不起作用是我们漏算。
+        if params.standard == "TELCORDIA_SR332" and not cat.pi_t_exempt:
             delta_t = float(cat.stress_spec.get("default_delta_t_c", 0.0))
             t_op = assumption.ambient_temp_c + delta_t
             pi_t, formula, inputs = _telcordia_pi_t(params, cat.stress_spec, t_op)
@@ -125,6 +128,21 @@ def assess(
             step += 1
             lambda_env *= pi_t
             factor_values["pi_T"] = pi_t
+        elif params.standard == "TELCORDIA_SR332" and cat.pi_t_exempt:
+            trace.append(
+                TraceStep(
+                    step=step,
+                    name="温度因子 π_T",
+                    formula="π_T = 1.0（该类目无温度模型，标准未覆盖）",
+                    inputs={"pi_T_exempt": True, "category": cat.code},
+                    value=1.0,
+                    unit="-",
+                    source="SR-332 未给出机械/结构件模型",
+                    note="不是漏算：机械件的失效与结温无关，套 Arrhenius 会得到无物理意义的数。",
+                )
+            )
+            step += 1
+            factor_values["pi_T"] = 1.0
 
         # ---- 步骤 3：质量因子 ---------------------------------------------
         trace.append(
@@ -166,7 +184,16 @@ def assess(
                 factors=factor_values,
                 lambda_part=lambda_part,
                 trace=trace,
-                warnings=[],
+                warnings=(
+                    []
+                    if cat.is_standard
+                    else [
+                        f"「{cat.name}」不在 {params.standard} 的覆盖范围内，"
+                        f"失效率按工程假设值 {cat.lambda_g:g} FIT 保守计入"
+                        f"（{cat.note or '见参数库'}），不能作为定稿依据。"
+                    ]
+                ),
+                is_standard=cat.is_standard,
             )
         )
 

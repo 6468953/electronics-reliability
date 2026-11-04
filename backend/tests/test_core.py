@@ -105,8 +105,54 @@ def test_classify_three_way_split():
     r = clf.classify("电容 0.1uF 50V 0603")
     assert r.status == "pending_review", r.reason
 
+    # 非电子件：以前库里根本没有结构件/紧固件这类目，只能判"未识别"；
+    # 现在归到结构五金大类，且因为描述写得明确，可以直接自动归类。
     r = clf.classify("定制五金支架 SUS304 折弯件")
-    assert r.status == "unrecognized"
+    assert r.status == "auto" and r.best.code == "MECH_BRACKET"
+
+    # 真正该判"未识别"的：描述里没有任何可用的品类信息
+    r = clf.classify("杂项 待定 见附件")
+    assert r.status == "unrecognized", r.reason
+
+
+def test_classify_non_electronic_categories():
+    """结构件/线缆/辅料/包材：真实 BOM 里一定有，必须能落到类目。"""
+    from core.classify.engine import Classifier
+
+    clf = Classifier(load_category_kb())
+    cases = {
+        "M3×8 十字圆头螺丝 不锈钢": "MECH_FASTENER",
+        "ABS 注塑外壳 黑色 阻燃 V0 含前后面板": "MECH_ENCLOSURE",
+        "尼龙绝缘柱 M3 双通 6mm": "MECH_INSULATOR",
+        "XH2.54 4P 端子线 长200mm 已压接": "CABLE_HARNESS",
+        "UL1007 AWG22 红色 电源线": "CABLE_WIRE",
+        "尼龙扎带 3×100 白色": "CABLE_TIE",
+        "导热垫 1.5mm 30×30 双面自粘": "THERMAL_PAD",
+        "三防漆 丙烯酸 1L 刷涂": "ADHESIVE",
+        "彩盒 250×180×80 单瓦楞": "PKG_BOX",
+        "条码标签 50×20 铜版纸 不干胶": "PKG_LABEL",
+    }
+    for desc, expect in cases.items():
+        r = clf.classify(desc)
+        assert r.best and r.best.code == expect, f"{desc} → {r.best.code if r.best else None} ({r.status})"
+
+
+def test_designator_prefix_narrows_major_only():
+    """位号前缀只能定大类，不能定小类；也不能推翻明显更强的描述证据。"""
+    from core.classify.engine import Classifier
+
+    clf = Classifier(load_category_kb())
+
+    # 同一个模糊描述：带 C 位号后得分变高，但仍是"陶瓷/薄膜/钽"之间的待确认
+    a = clf.classify("电容 0.1uF 50V 0603")
+    b = clf.classify("电容 0.1uF 50V 0603", ref_des="C3")
+    assert b.best.parent == "CAP"
+    assert b.best.score > a.best.score
+    assert b.status in ("pending_review", "auto")
+
+    # 描述证据足够强时，位号给错也翻不了案（这里给螺丝一个 W 线缆位号）
+    r = clf.classify("M3×8 十字圆头螺丝 不锈钢", ref_des="W1")
+    assert r.best.code == "MECH_FASTENER"
 
 
 def test_classify_negative_keyword_blocks_wrong_category():
@@ -375,3 +421,56 @@ def test_sensitivity_monotonic_in_temperature(mil):
     mtbfs = [p.mtbf_hours for p in res.points]
     assert mtbfs == sorted(mtbfs, reverse=True), "温度升高 MTBF 必须单调下降"
     assert res.elasticity is not None and res.elasticity < 0
+
+
+# ---------------------------------------------------------------------------
+# 8. 非标准覆盖件（机械/结构件）与双标准口径
+# ---------------------------------------------------------------------------
+
+
+def _mech_parts():
+    """一份含结构件与紧固件的 BOM：这类零件两套标准都没有失效模型。"""
+    return [
+        PartInput(1, "GB/T818-M3×8-304", "M3×8 十字圆头螺丝 不锈钢", 10, "MECH_FASTENER"),
+        PartInput(2, "DWG-BRK-1042", "定制五金支架 SUS304 折弯件", 2, "MECH_BRACKET"),
+        PartInput(3, "DWG-WH-3015", "XH2.54 4P 端子线 已压接", 2, "CABLE_HARNESS"),
+        PartInput(4, "CC0603KRX7R9BB104", "CAP CER 0.1uF 50V X7R 0603", 8, "CAP_CER"),
+    ]
+
+
+def test_mechanical_parts_are_counted_not_silently_skipped(mil):
+    """机械件必须计入失效率（保守方向），且被标记为非标准覆盖。
+
+    如果实现成"跳过"，MTBF 会凭空变好——这是可靠性计算里最危险的一类错误。
+    """
+    a = Assumption(ambient_temp_c=40, duty_cycle=1.0, standard="MIL-217F", mode="parts_count")
+    res = parts_count.assess(_mech_parts(), a, mil)
+
+    mech = [p for p in res.parts if not p.is_standard]
+    assert len(mech) == 3
+    assert all(p.lambda_part > 0 for p in mech), "机械件被静默跳过了"
+    assert all(p.warnings for p in mech), "机械件没有给出非标准提示"
+    assert any("标准未覆盖" in w for w in res.warnings)
+
+
+def test_mechanical_category_exists_in_both_standards(mil, tel):
+    """新增的 11 个非电子类目必须在两套标准里都有条目，否则切换标准就会算不出来。"""
+    new_codes = [
+        "MECH_BRACKET", "MECH_FASTENER", "MECH_ENCLOSURE", "MECH_INSULATOR",
+        "CABLE_WIRE", "CABLE_HARNESS", "CABLE_TIE",
+        "THERMAL_PAD", "ADHESIVE", "PKG_BOX", "PKG_LABEL",
+    ]
+    for code in new_codes:
+        for p in (mil, tel):
+            assert p.has_category(code), f"{p.standard} 缺少类目 {code}"
+            assert p.category(code).is_standard is False
+            assert p.category(code).lambda_g > 0
+
+
+def test_telcordia_skips_pi_t_for_mechanical(tel):
+    """SR-332 计数法给机械件套 Arrhenius 是没有物理意义的，必须跳过 π_T。"""
+    a = Assumption(ambient_temp_c=85, duty_cycle=1.0, standard="TELCORDIA_SR332", mode="parts_count")
+    res = parts_count.assess(_mech_parts(), a, tel)
+    nut = [p for p in res.parts if p.category_code == "MECH_FASTENER"][0]
+    assert nut.factors.get("pi_T", 1.0) == pytest.approx(1.0)
+    assert any("无温度模型" in s.name or "π_T = 1.0" in s.formula for s in nut.trace)

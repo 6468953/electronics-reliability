@@ -107,6 +107,7 @@ class PartResult:
     lambda_part: float                  # 该零件（含 qty）的总失效率（FIT）
     trace: List[TraceStep] = field(default_factory=list)
     warnings: List[str] = field(default_factory=list)
+    is_standard: bool = True            # False = 该类目不在此标准覆盖范围内（λ 为工程假设值）
 
 
 @dataclass

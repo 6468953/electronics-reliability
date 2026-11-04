@@ -143,7 +143,17 @@ def assess(parts: List[PartInput], assumption: Assumption, params: ParamSet) -> 
                 factors=factor_values,
                 lambda_part=lambda_part,
                 trace=trace,
-                warnings=part_warnings,
+                warnings=part_warnings
+                + (
+                    []
+                    if cat.is_standard
+                    else [
+                        f"「{cat.name}」不在 {params.standard} 的覆盖范围内，"
+                        f"无应力模型，失效率按工程假设值 {cat.lambda_g:g} FIT 保守计入"
+                        f"（{cat.note or '见参数库'}），不能作为定稿依据。"
+                    ]
+                ),
+                is_standard=cat.is_standard,
             )
         )
 

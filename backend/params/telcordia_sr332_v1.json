@@ -61,6 +61,10 @@
     },
     "pcb_solder": {
       "parts_stress": { "pi_T": { "formula": "arrhenius", "ea_ev": 0.2, "ref_temp_c": 40.0 }, "default_delta_t_c": 0.0 }
+    },
+    "mechanical": {
+      "_why_empty": "机械结构件无 π_T / π_V / π_S 物理模型，留空使因子链只保留 π_Q 与 π_E；计数法下该类目还会跳过 Telcordia 的 π_T（见 pi_T_exempt）。",
+      "parts_stress": {}
     }
   },
   "categories": {
@@ -111,6 +115,18 @@
 
     "FAN": { "name": "风扇", "group": "机电件", "family": "electromechanical", "lambda_g": 2.5 },
     "PCB": { "name": "PCB 板", "group": "机电件", "family": "pcb_solder", "lambda_g": 0.06 },
-    "SOLDER": { "name": "焊点", "group": "机电件", "family": "pcb_solder", "lambda_g": 0.006 }
+    "SOLDER": { "name": "焊点", "group": "机电件", "family": "pcb_solder", "lambda_g": 0.006 },
+
+    "MECH_BRACKET": { "name": "支架/钣金件", "group": "结构五金件", "family": "mechanical", "lambda_g": 0.2, "is_standard": false, "pi_T_exempt": true, "note": "SR-332 不覆盖机械件，取与 MIL 口径一致的保守工程值" },
+    "MECH_FASTENER": { "name": "紧固件（螺丝/螺母/垫圈）", "group": "结构五金件", "family": "mechanical", "lambda_g": 0.05, "is_standard": false, "pi_T_exempt": true, "note": "SR-332 不覆盖机械件，保守工程值" },
+    "MECH_ENCLOSURE": { "name": "外壳/面板", "group": "结构五金件", "family": "mechanical", "lambda_g": 0.1, "is_standard": false, "pi_T_exempt": true, "note": "SR-332 不覆盖机械件，保守工程值" },
+    "MECH_INSULATOR": { "name": "绝缘/缓冲件", "group": "结构五金件", "family": "mechanical", "lambda_g": 0.05, "is_standard": false, "pi_T_exempt": true, "note": "SR-332 不覆盖机械件，保守工程值" },
+    "CABLE_WIRE": { "name": "导线/电缆", "group": "线缆线束", "family": "mechanical", "lambda_g": 0.5, "is_standard": false, "pi_T_exempt": true, "note": "SR-332 不覆盖线缆，按 NPRD 量级取值" },
+    "CABLE_HARNESS": { "name": "线束/排线组件（含压接点）", "group": "线缆线束", "family": "mechanical", "lambda_g": 2.0, "is_standard": false, "pi_T_exempt": true, "note": "压接为高频失效部位，保守取值" },
+    "CABLE_TIE": { "name": "扎带/理线固定件", "group": "线缆线束", "family": "mechanical", "lambda_g": 0.05, "is_standard": false, "pi_T_exempt": true, "note": "辅件，失效率极低" },
+    "THERMAL_PAD": { "name": "导热硅脂/导热垫", "group": "导热辅料", "family": "mechanical", "lambda_g": 0.05, "is_standard": false, "pi_T_exempt": true, "note": "退化型失效，此处仅计随机分量" },
+    "ADHESIVE": { "name": "三防漆/胶粘剂", "group": "导热辅料", "family": "mechanical", "lambda_g": 0.05, "is_standard": false, "pi_T_exempt": true, "note": "辅料，间接影响" },
+    "PKG_BOX": { "name": "包装/缓冲材", "group": "包装标识", "family": "mechanical", "lambda_g": 0.01, "is_standard": false, "pi_T_exempt": true, "note": "不参与功能失效" },
+    "PKG_LABEL": { "name": "标签/铭牌", "group": "包装标识", "family": "mechanical", "lambda_g": 0.01, "is_standard": false, "pi_T_exempt": true, "note": "不参与功能失效" }
   }
 }

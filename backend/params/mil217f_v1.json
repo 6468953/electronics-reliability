@@ -11,6 +11,7 @@
     "parts_count": "零件计数法公式：λ_整机 = Σ(用量 × λ_g × π_Q)。此模式【不含温度修正】——这是标准定义（用于早期无详细应力信息的阶段），不是 bug。",
     "parts_stress": "零件应力法公式：λ_零件 = λ_b × π_T × π_V × π_S × π_Q × π_E。各类别实际参与的因子并不相同，由 family 决定；未提供应力数据时该因子取 1.0 并在追溯中标注 default。",
     "family": "因子族模板。同一族共享 π_T / π_V / π_S 的公式形式，类别只需覆盖差异项，避免每个类别重复抄写。",
+    "mechanical": "非电子件（结构五金、线缆、辅料、包装）。MIL-HDBK-217F 与 Telcordia SR-332 都不覆盖这类零件，业界做法是另配 NSWC-11（机械件）或 NPRD（非电子件数据）模型。本系统未实现这两套标准，因此这些类目标记 is_standard=false，λ 值按 NPRD 量级取保守工程值，并在结果页与报告中单列为「非标准覆盖件」，不得作为定稿依据。",
     "ic_model": "注意：MIL-HDBK-217F 对集成电路的原式是 C1·π_T + C2·π_E 的双项模型；本实现统一用 Arrhenius 单指数近似（Ea 可配），这是【有意的简化】，差异在常温区通常 <2 倍。"
   },
   "engine_version": "1.0.0",
@@ -113,6 +114,10 @@
         "pi_T": { "formula": "power_law", "ref_temp_c": 25.0, "exponent": 1.0 },
         "default_delta_t_c": 0.0
       }
+    },
+    "mechanical": {
+      "_why_empty": "机械结构件没有 π_T / π_V / π_S 的物理模型（无结温、无电应力）。留空表示因子链只保留 π_Q 与 π_E，避免给螺丝凭空套一个 Arrhenius 温度因子。",
+      "parts_stress": {}
     }
   },
   "categories": {
@@ -163,6 +168,62 @@
 
     "FAN": { "name": "风扇（机电磨损件）", "group": "机电件", "family": "electromechanical", "lambda_g": 4.0, "parts_stress": { "ea_ev": 0.4, "default_delta_t_c": 10.0 } },
     "PCB": { "name": "PCB 板（含过孔）", "group": "机电件", "family": "pcb_solder", "lambda_g": 0.1 },
-    "SOLDER": { "name": "焊点（按点数计）", "group": "机电件", "family": "pcb_solder", "lambda_g": 0.01 }
+    "SOLDER": { "name": "焊点（按点数计）", "group": "机电件", "family": "pcb_solder", "lambda_g": 0.01 },
+
+    "MECH_BRACKET": {
+      "name": "支架/钣金件", "group": "结构五金件", "family": "mechanical", "lambda_g": 0.2,
+      "is_standard": false, "pi_T_exempt": true,
+      "note": "MIL-217F 未覆盖机械结构件，按 NPRD 非电子件失效率量级取保守工程值，不计温度影响"
+    },
+    "MECH_FASTENER": {
+      "name": "紧固件（螺丝/螺母/垫圈）", "group": "结构五金件", "family": "mechanical", "lambda_g": 0.05,
+      "is_standard": false, "pi_T_exempt": true,
+      "note": "标准无模型；松动为主要失效模式，按极低随机失效率保守取值"
+    },
+    "MECH_ENCLOSURE": {
+      "name": "外壳/面板", "group": "结构五金件", "family": "mechanical", "lambda_g": 0.1,
+      "is_standard": false, "pi_T_exempt": true,
+      "note": "标准无模型；塑料/金属壳体随机失效极低，取值仅用于 BOM 完整性"
+    },
+    "MECH_INSULATOR": {
+      "name": "绝缘/缓冲件", "group": "结构五金件", "family": "mechanical", "lambda_g": 0.05,
+      "is_standard": false, "pi_T_exempt": true,
+      "note": "标准无模型；老化主要表现为变硬/开裂，非随机失效"
+    },
+    "CABLE_WIRE": {
+      "name": "导线/电缆", "group": "线缆线束", "family": "mechanical", "lambda_g": 0.5,
+      "is_standard": false, "pi_T_exempt": true,
+      "note": "标准无单独模型；按 NPRD 导线量级取值，弯折与磨损为主要失效原因"
+    },
+    "CABLE_HARNESS": {
+      "name": "线束/排线组件（含压接点）", "group": "线缆线束", "family": "mechanical", "lambda_g": 2.0,
+      "is_standard": false, "pi_T_exempt": true,
+      "note": "压接点为真实高频失效部位，取值高于单根导线，属保守估计"
+    },
+    "CABLE_TIE": {
+      "name": "扎带/理线固定件", "group": "线缆线束", "family": "mechanical", "lambda_g": 0.05,
+      "is_standard": false, "pi_T_exempt": true,
+      "note": "辅件，失效率极低"
+    },
+    "THERMAL_PAD": {
+      "name": "导热硅脂/导热垫", "group": "导热辅料", "family": "mechanical", "lambda_g": 0.05,
+      "is_standard": false, "pi_T_exempt": true,
+      "note": "失效模式为干涸/泵出，属退化型；此处仅计随机分量"
+    },
+    "ADHESIVE": {
+      "name": "三防漆/胶粘剂", "group": "导热辅料", "family": "mechanical", "lambda_g": 0.05,
+      "is_standard": false, "pi_T_exempt": true,
+      "note": "辅料，失效影响为间接（防护失效）"
+    },
+    "PKG_BOX": {
+      "name": "包装/缓冲材", "group": "包装标识", "family": "mechanical", "lambda_g": 0.01,
+      "is_standard": false, "pi_T_exempt": true,
+      "note": "不参与功能失效，保留类目只为 BOM 完整性"
+    },
+    "PKG_LABEL": {
+      "name": "标签/铭牌", "group": "包装标识", "family": "mechanical", "lambda_g": 0.01,
+      "is_standard": false, "pi_T_exempt": true,
+      "note": "不参与功能失效，保留类目只为 BOM 完整性"
+    }
   }
 }

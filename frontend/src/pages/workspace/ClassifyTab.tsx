@@ -128,10 +128,14 @@ export default function ClassifyTab({ version, onChanged }: { version: any; onCh
     try {
       const r = await classifyQueue(vid, { status: statusFilter, page, page_size: 20 })
       setQueue(r)
-      // 默认选中引擎最看好的候选，让人"确认"而不是"从零开始选"
+      // 只预填"有把握"的候选（≥30 分，即至少进了待确认区间）。
+      // 早期版本无条件预填 candidates[0]，于是 1% 分的胡乱猜测也会被塞进下拉框，
+      // 用户看到「★ MOSFET（1）」会以为那是系统建议，顺手点确认就把错的分类确认掉了——
+      // 这比不预填危险得多。没把握就留空，让 placeholder 提示"选择类目"。
       const init: Record<number, string> = {}
       r.items.forEach((it: any) => {
-        if (it.candidates?.length) init[it.id] = it.candidates[0].category_code
+        const top = it.candidates?.[0]
+        if (top && top.score >= 0.3) init[it.id] = top.category_code
       })
       setPicked(init)
       setSelected([])
@@ -358,8 +362,9 @@ export default function ClassifyTab({ version, onChanged }: { version: any; onCh
                 例如 <code>电容 0.1uF 50V 0603</code>：陶瓷、薄膜、钽都可能这么写。
               </div>
               <div style={{ marginTop: 4 }}>
-                <Tag color="red">&lt; 30 分</Tag> 未识别 —— 库里没有的类型（五金件、螺丝、结构件），
-                需要人主动选类目，选完可以沉淀成关键词。
+                <Tag color="red">&lt; 30 分</Tag> 未识别 —— 描述太短、或库里确实没有这个类型
+                （新材料、厂内自命名件），需要人主动选类目，选完可以沉淀成关键词。
+                结构件、螺丝、线缆、辅料、包材已在大类里，正常描述都能落到对应类目。
               </div>
               <div className="muted" style={{ marginTop: 8 }}>
                 未确认的行<strong>不会进入计算</strong>。这是有意的：宁可报错让你确认，
@@ -586,10 +591,14 @@ export default function ClassifyTab({ version, onChanged }: { version: any; onCh
                       value={picked[row.id]}
                       onChange={(v) => setPicked((p) => ({ ...p, [row.id]: v }))}
                       options={[
-                        ...(row.candidates || []).map((c: any) => ({
-                          value: c.category_code,
-                          label: `★ ${c.category_name}（${Math.round(c.score * 100)}）`,
-                        })),
+                        // 低分候选（<10）不进建议列表：那些是"矮子里拔将军"的结果，
+                        // 摆出来只会让下拉框变长、还会被误当成系统建议。
+                        ...(row.candidates || [])
+                          .filter((c: any) => c.score >= 0.1)
+                          .map((c: any) => ({
+                            value: c.category_code,
+                            label: `★ ${c.category_name}（${Math.round(c.score * 100)}）`,
+                          })),
                         ...grouped.map((g) => ({
                           label: g.label,
                           options: g.options.filter(

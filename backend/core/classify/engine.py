@@ -45,6 +45,42 @@ AUTO_THRESHOLD = 0.70
 REVIEW_THRESHOLD = 0.30
 AMBIGUITY_MARGIN = 0.05  # Top1 与 Top2 的分差小于此值时降级为待确认
 
+# 位号前缀 → 大类。来自通用原理图位号惯例：R 电阻、C 电容、L 电感、D 二极管、
+# Q 晶体管、U 集成电路、J/CN 连接器、Y 晶振、F 保险丝、K 继电器、SW 开关、W 线缆。
+# 【为什么这是最值钱的一个信号】BOM 描述常常写得含糊（"电容 0.1uF 50V 0603" 到底是
+# 陶瓷还是薄膜？），但位号前缀是不会含糊的——C 开头就是电容。只按描述打分时，
+# 这类模糊行只能进人工队列；带上位号后就可以直接用大方向兜住，把候选范围收窄一个数量级。
+# 注意：它只能定"大类"，定不了"小类"（C3 是陶瓷还是铝电解还得看描述），所以是加分项，不是判决。
+REFDES_MAJOR = {
+    "PCB": "EM", "LED": "LED_G", "SW": "SWITCH_G", "RP": "RES", "IC": "IC",
+    "CN": "CONN", "PS": "MODULE", "R": "RES", "C": "CAP", "L": "IND",
+    "D": "DIO", "Q": "TRA", "U": "IC", "J": "CONN", "P": "CONN",
+    "Y": "XTAL_G", "F": "FUSE_G", "K": "RELAY_G", "B": "EM", "S": "EM",
+    "W": "CABLE", "X": "MECH",
+}
+
+# 位号加成：命中同大类时加 0.10（不乘系数，避免把 0.05 的噪声放大成 0.06 假象）。
+# 只对"本来就有一点分"的候选生效（>=0.10），否则任何一个词都能被位号抬进待确认队列。
+DESIGNATOR_BONUS = 0.10
+DESIGNATOR_MIN_SCORE = 0.10
+
+
+def _designator_major(ref_des: Optional[str]) -> Optional[str]:
+    """从位号（R12 / LED3 / PCB1）推断所属大类；推不出返回 None。
+
+    只取前缀字母并按长度优先匹配——"LED3" 要匹配 LED 而不是 L（电感），
+    "PCB1" 要匹配 PCB 而不是 P（连接器）。这个顺序搞反会把整批 LED 判成电感。
+    """
+    if not ref_des:
+        return None
+    letters = "".join(ch for ch in str(ref_des).strip().upper() if ch.isalpha())
+    if not letters:
+        return None
+    for key in sorted(REFDES_MAJOR, key=len, reverse=True):
+        if letters.startswith(key):
+            return REFDES_MAJOR[key]
+    return None
+
 
 @dataclass
 class Candidate:
@@ -127,9 +163,16 @@ class Classifier:
         self._idf, self._default_idf = similarity.build_idf(token_lists)
 
     # ------------------------------------------------------------------
-    def classify(self, description: str, forced_major: Optional[str] = None) -> MatchResult:
+    def classify(
+        self, description: str, forced_major: Optional[str] = None, ref_des: Optional[str] = None
+    ) -> MatchResult:
         norm = normalize_text(description)
         features = extract_features(description)
+
+        # 位号前缀只能提示"大类"，用于给同大类的候选加分（见模块头部说明）
+        hint_major = _designator_major(ref_des)
+        if hint_major:
+            features["refdes_major"] = hint_major
 
         if not norm or len(norm) < 2:
             return MatchResult(
@@ -158,6 +201,8 @@ class Classifier:
                 char_s = max(char_s, similarity.char_containment(norm, normalize_text(sample)))
 
             score = similarity.fuse(kw_s, idf_s, char_s)
+            if hint_major and c.parent == hint_major and score >= DESIGNATOR_MIN_SCORE:
+                score = min(1.0, score + DESIGNATOR_BONUS)
             candidates.append(
                 Candidate(
                     code=c.code,
@@ -209,6 +254,12 @@ class Classifier:
 
         if best.negatives:
             reason += f" 注意：描述中出现了排除词（{'、'.join(best.negatives)}），已扣减该候选得分。"
+
+        if hint_major:
+            reason += (
+                f" 位号前缀提示大类为「{self.major_name.get(hint_major, hint_major)}」，"
+                "已给该大类候选加分。"
+            )
 
         return MatchResult(description, status, best, top, reason, features)
 

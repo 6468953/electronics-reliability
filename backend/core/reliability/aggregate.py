@@ -92,6 +92,20 @@ def build_warnings(
             "这些零件的失效率属于量级估算，结果整体偏乐观。建议补录工作电压、功率或温升。"
         )
 
+    # 非标准覆盖件（机械结构件、线缆、辅料、包装）：照常计入 MTBF，但必须让人知道
+    # 这部分数字不是标准值。不说清楚，用户会以为整机 MTBF 全部有标准依据。
+    nonstd = [p for p in parts if not p.is_standard]
+    if nonstd:
+        cats = sorted({p.category_name for p in nonstd})
+        qty = sum(p.qty for p in nonstd)
+        fit = sum(p.lambda_part for p in nonstd)
+        warns.append(
+            f"有 {len(nonstd)} 行、共 {qty} 件属于标准未覆盖的非电子件"
+            f"（{len(cats)} 类：{'、'.join(cats)}），失效率按工程假设值保守计入，"
+            f"合计 {fit:.2f} FIT。这部分需另配 NSWC-11（机械件）或 NPRD（非电子件数据）模型，"
+            "或补实测数据，不能作为定稿依据。"
+        )
+
     single_member_groups = [
         g for g in rbd_model.groups if len(g.member_ids) < 2
     ]

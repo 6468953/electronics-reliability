@@ -48,7 +48,9 @@ def run_classification(db: Session, version: BomVersion, only_unclassified: bool
             counts["skipped"] += 1
             continue
 
-        res = clf.classify(item.description)
+        # 位号前缀（R12/C3/U5）是一份免费的强信号，一起传进去：
+        # 描述写得含糊时，位号能定大类，把候选范围收窄一个数量级。
+        res = clf.classify(item.description, ref_des=getattr(item, "ref_des", None))
         counts[res.status] = counts.get(res.status, 0) + 1
 
         item.match_status = res.status

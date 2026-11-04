@@ -47,7 +47,14 @@ def _read_json(path: str) -> Dict[str, Any]:
 
 @dataclass
 class CategoryParam:
-    """一个类别（如 CAP_ALU）在某标准下的完整计算规格。"""
+    """一个类别（如 CAP_ALU）在某标准下的完整计算规格。
+
+    is_standard / note / pi_t_exempt 三个字段是为「标准没覆盖的零件」准备的：
+    螺丝、支架、线缆这类非电子件在 MIL-217F 与 SR-332 里都没有失效率模型，
+    但真实 BOM 里一定会有。把它们标成 is_standard=False 后，计算照常计入（保守方向），
+    结果页与报告会单列出来提醒「这部分的数字不是标准值，不能拿去定稿」。
+    如果直接静默跳过，MTBF 会凭空变好，那才是真正危险的做法。
+    """
 
     code: str
     name: str
@@ -55,6 +62,9 @@ class CategoryParam:
     family: str
     lambda_g: float
     stress_spec: Dict[str, Any] = field(default_factory=dict)
+    is_standard: bool = True           # False = 该标准未覆盖，λ 为工程假设值
+    note: str = ""                     # 取值依据，展示在结果页与报告中
+    pi_t_exempt: bool = False          # True = 不适用温度因子（机械件无结温概念）
 
 
 @dataclass
@@ -142,6 +152,9 @@ def load_param_set(standard: str, param_dir: Optional[str] = None) -> ParamSet:
             family=family,
             lambda_g=float(spec["lambda_g"]),
             stress_spec=merged,
+            is_standard=bool(spec.get("is_standard", True)),
+            note=str(spec.get("note", "")),
+            pi_t_exempt=bool(spec.get("pi_T_exempt", False)),
         )
 
     if not categories:

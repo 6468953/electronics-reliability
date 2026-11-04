@@ -365,10 +365,14 @@ export default function BomTab({
           showIcon
           style={{ marginBottom: 12 }}
           message="模拟数据是刻意设计的"
-          description="包含：高度相似的三兄弟（陶瓷/薄膜/铝电解同为 0.1uF 50V）、缺介质的模糊描述、完全不相关的五金件、降额超限的电容、动作次数爆炸的继电器。用来看清三级分流与预警是否真的在工作。"
+          description="料号都是真实型号（GRM188R71H104KA93D、RC0603FR-0710KL）、图号（DWG-BRK-1042）或国标号（GB/T818-M3×8-304），不再自拟虚拟料号。包含：同容值同耐压的陶瓷/薄膜/铝电解三兄弟、缺介质的模糊描述、结构件与螺丝、线缆与线束、降额超限的电容、动作次数爆炸的继电器。用来看清三级分流与预警是否真的在工作。"
         />
         <Form form={simForm} layout="vertical" initialValues={{ scale: 200, seed: 42, label: '模拟 BOM' }}>
-          <Form.Item name="scale" label="规模（行数）">
+          <Form.Item
+            name="scale"
+            label="规模（目标行数）"
+            extra="行数 = 不同料号的种类数。料号不做伪造，所以实际行数受内置物料库限制（当前 73 种）；超出部分会并入同料号行的用量，不会凭空造料号。"
+          >
             <Radio.Group optionType="button">
               <Radio.Button value={50}>50</Radio.Button>
               <Radio.Button value={200}>200</Radio.Button>
