@@ -46,6 +46,7 @@ import {
   getAssessment,
   getTrace,
 } from '../../api'
+import EvaluationLimits from '../../components/EvaluationLimits'
 import { DERATING_META, MODE_TEXT, STANDARD_TEXT, VERDICT_META, int, mtbfYears, num, pct } from '../../utils/format'
 
 export default function ResultTab({
@@ -338,6 +339,9 @@ export default function ResultTab({
           </div>
         </Space>
       </Card>
+
+      {/* 局限性：按本次结果现算，和 PDF 报告附录 C 是同一套口径 */}
+      <EvaluationLimits data={data} />
 
       {(a.warnings || []).length > 0 && (
         <Alert

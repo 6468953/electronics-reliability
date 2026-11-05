@@ -30,3 +30,11 @@ wheels/
 .DS_Store
 Thumbs.db
 *.log
+
+# --- 参数录入 ---
+# param_worksheet.py 回写时自动生成的原文件备份，属于本机操作痕迹
+backend/params/*.json.bak
+# 数据库重建前的备份，同理不入库
+*.db.bak
+# 临时测试产物
+.tmp_test/

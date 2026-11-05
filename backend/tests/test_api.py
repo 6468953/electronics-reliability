@@ -193,3 +193,53 @@ def test_glossary_and_params(client, auth):
 
     versions = client.get("/api/v1/param-versions", headers=auth).json()
     assert len(versions) >= 4
+
+
+def test_project_survival_percent_is_normalized(client, auth):
+    """新建项目按百分数填 95，后端必须存成 0.95。
+
+    这是一个真实踩过的 bug：前端表单按百分数填，后端与计算核心按小数用，
+    中间没做转换，存进去就是 95。后果是主页卡片显示「存活率 ≥ 9500%」，
+    而评估时把 95 当成目标 R(t)，判定永远不通过——而且这个错不会报任何异常，
+    只会让人以为"产品可靠性不够"。
+    """
+    r = client.post(
+        "/api/v1/projects",
+        json={"name": "存活率归一化测试", "target_survival": 95},
+        headers=auth,
+    )
+    assert r.status_code in (200, 201), r.text
+    assert abs(r.json()["target_survival"] - 0.95) < 1e-9
+
+    # 已经是小数的值不能被二次除
+    r2 = client.post(
+        "/api/v1/projects",
+        json={"name": "存活率小数测试", "target_survival": 0.9},
+        headers=auth,
+    )
+    assert r2.status_code in (200, 201)
+    assert abs(r2.json()["target_survival"] - 0.9) < 1e-9
+
+    # 0 / 1 / 负数都是非法目标，必须拦住
+    for bad in (0, 1, -5, 150):
+        rb = client.post(
+            "/api/v1/projects",
+            json={"name": f"非法存活率 {bad}", "target_survival": bad},
+            headers=auth,
+        )
+        assert rb.status_code == 422, f"target_survival={bad} 应该被拒绝，实际 {rb.status_code}"
+
+
+def test_param_meta_exposes_data_quality(client, auth):
+    """参数库要自报「数据成色」，否则界面无法区分示例值与照表录入的值。
+
+    没有这个字段，用户在结果页看到 2,348,245 h 时无从判断它是"照标准算的"
+    还是"用示例量级估的"——两者在界面上长得一模一样。
+    """
+    for std in ("MIL-217F", "TELCORDIA_SR332"):
+        d = client.get(f"/api/v1/params/{std}", headers=auth)
+        assert d.status_code == 200, d.text
+        body = d.json()
+        assert body.get("data_quality") in ("demo", "partial", "verified"), body.get("data_quality")
+        assert body.get("data_quality_note"), "数据成色必须带一句说明，否则用户不知道该怎么改"
+        assert body.get("source_ref"), "缺标准出处"

@@ -16,7 +16,13 @@ app/services/report.py — 评估报告生成（PDF / XLSX）
     7. 降额检查（违规优先）
     8. 敏感性摘要
     9. 综合结论与改进建议
-    10. 附录 A 计算明细 / 附录 B 参数来源 / 附录 C 免责声明
+    10. 附录 A 计算明细 / 附录 B 参数来源 / 附录 C 本次评估的局限性（按实算数据生成）
+
+【为什么附录 C 是动态的】
+一段写死的免责声明，读者会整段跳过，而且它说不清这次到底有多少零件用了默认温升、
+非电子件占了多少 FIT。所以附录 C 从本次结果里现算：哪几项偏离了「标准值」、
+偏离多少、影响哪个结论。参数库的 data_quality 字段（demo/partial/verified）
+决定第一条的措辞——部门把原表录进去之后，这页会自动变成「可作为正式报告依据」。
 
 【中文字体（Windows 部署的关键坑）】
 reportlab 内置字体不含中文，不注册 TTF 的话所有汉字变成黑方块。
@@ -208,6 +214,86 @@ def _assumption_lines(payload: Dict[str, Any], param_meta: Dict[str, Any]) -> Li
         ["MTBF 门槛", _fmt(a.get("mtbf_threshold_hours"), 0) + " h" if a.get("mtbf_threshold_hours") else "未设置", "可选的第二道判定闸"],
         ["计算标准 / 模式", f'{a.get("standard")} / {"零件计数法" if a.get("mode") == "parts_count" else "零件应力法"}', "两套标准口径不同，不可混用"],
     ]
+
+
+def _limitations(payload: Dict[str, Any], param_meta: Dict[str, Any]) -> List[List[str]]:
+    """按本次评估的实际数据，逐条算出「这次结论的边界在哪」。
+
+    为什么不写成一段固定的免责声明：固定文本读者会整段跳过，而且它说不清
+    这次到底有多少零件用了默认温升、非电子件占了多少 FIT。
+    把数字填进来，读者才知道该对哪一部分打折扣、打多少。
+    """
+    a = payload.get("assessment", {}) or {}
+    parts = a.get("parts", []) or []
+    wear = payload.get("wear") or {}
+    der = payload.get("derating") or {}
+    total_fit = float(a.get("lambda_total_fit") or 0.0)
+    rows: List[List[str]] = []
+
+    # 1) 参数基准值的来源等级：影响的是「所有数字」
+    quality = param_meta.get("data_quality", "demo")
+    label = {
+        "demo": "示例量级（未按原表录入）",
+        "partial": "部分类目已按原表录入",
+        "verified": "已按标准原表录入",
+    }.get(quality, quality)
+    rows.append([
+        "参数基准值",
+        label,
+        "不可对外引用" if quality != "verified" else "可作为正式报告依据",
+    ])
+
+    # 2) 标准未覆盖的非电子件：这部分 FIT 不是标准值
+    nonstd = [p for p in parts if p.get("is_standard") is False]
+    if nonstd:
+        fit = sum(float(p.get("lambda_part") or 0) for p in nonstd)
+        qty = sum(int(p.get("qty") or 0) for p in nonstd)
+        pct = (fit / total_fit * 100) if total_fit else 0.0
+        rows.append([
+            "非电子件（标准未覆盖）",
+            f"{len(nonstd)} 行 / {qty} 件 / {fit:.1f} FIT（占 {pct:.0f}%）",
+            "λ 为工程假设值，不能作定稿依据",
+        ])
+
+    # 3) 默认温升：温度因子的输入是否真实
+    default_parts = [p for p in parts if any(s.get("is_default") for s in (p.get("trace") or []))]
+    if default_parts:
+        rows.append([
+            "默认温升/应力",
+            f"{len(default_parts)} / {len(parts)} 个零件",
+            "结温按类别默认值估算，实际可能差 10~20°C",
+        ])
+
+    # 4) 置信度口径
+    cf = float(param_meta.get("confidence_factor_90") or 1.0)
+    if abs(cf - 1.0) < 1e-9:
+        rows.append(["置信度口径", "中值估计（90% 置信上限未应用）", "结果偏乐观，客户要求 UCL 时不满足"])
+
+    # 5) 冗余共因
+    if a.get("redundancy"):
+        rows.append(["冗余模型", f"{len(a['redundancy'])} 个并联组，未计共因失效", "冗余收益是上限，实际低于计算值"])
+
+    # 6) 降额缺数据（缺数据不等于合格，必须单独说）
+    der_items = der.get("items", []) or []
+    nod = [d for d in der_items if d.get("verdict") == "no_data"]
+    if nod:
+        rows.append([
+            "降额判定覆盖",
+            f"{len(nod)} / {len(der_items)} 项缺数据无法判定",
+            "「未判定」不等于「合格」，需补额定值或工作值",
+        ])
+
+    # 7) 磨损输入是否用了兜底默认
+    wear_items = wear.get("items", []) or []
+    dw = [w for w in wear_items if w.get("using_defaults")]
+    if dw:
+        rows.append([
+            "磨损输入",
+            f"{len(dw)} / {len(wear_items)} 项使用兜底默认值",
+            "寿命按保守默认值估算（偏悲观），需换 datasheet",
+        ])
+
+    return rows
 
 
 def _suggestions(payload: Dict[str, Any]) -> List[str]:
@@ -512,22 +598,60 @@ def _build_story(project: Dict[str, Any], payload: Dict[str, Any], param_meta: D
                 ["参数版本", a.get("param_version", "")],
                 ["引擎版本", a.get("engine_version", "")],
                 ["标准依据", param_meta.get("source_ref", "")],
+                [
+                    "数据质量",
+                    {
+                        "demo": "示例量级（未按标准原表录入）",
+                        "partial": "部分类目已按原表录入",
+                        "verified": "已按标准原表录入",
+                    }.get(param_meta.get("data_quality", "demo"), str(param_meta.get("data_quality", ""))),
+                ],
                 ["磨损模型", load_wear_models(str(settings.param_dir)).get("source_ref", "")],
                 ["降额准则", load_derating_rules(str(settings.param_dir)).get("source_ref", "")],
             ],
             widths=[30 * mm, 130 * mm],
         )
     )
+    if param_meta.get("data_quality_note"):
+        story.append(Spacer(1, 2 * mm))
+        story.append(Paragraph(param_meta["data_quality_note"], st["small"]))
 
-    # ---- 附录 C 免责 ----
-    story.append(Paragraph("附录 C　免责声明与口径说明", st["h1"]))
+    # ---- 附录 C 本次评估的局限性 ----
+    story.append(Paragraph("附录 C　本次评估的局限性（按本次数据实算）", st["h1"]))
+    story.append(
+        Paragraph(
+            "下表不是通用免责声明，而是按本次评估的实际数据算出来的边界。"
+            "读结论前请先看这一页——它说明哪些数字可以横向比较、哪些不能对外引用。",
+            st["body"],
+        )
+    )
+    story.append(Spacer(1, 2 * mm))
+    lim_rows = [["维度", "本次情况", "对结论的影响"]] + _limitations(payload, param_meta)
+    story.append(_tbl(lim_rows, widths=[38 * mm, 62 * mm, 50 * mm]))
+
+    story.append(Spacer(1, 4 * mm))
+    story.append(Paragraph("本次结论可以直接用于", st["h2"]))
     for line in [
-        "1. 本报告为理论可靠性预计，反映随机失效视角，精度通常为 ±2~5 倍，不代表实测寿命或现场故障率。",
-        "2. 预计结果不能替代 RDT（可靠性增长/验证试验）或现场数据；对外承诺前必须取得实测证据。",
-        "3. 磨损寿命部分为工程近似模型，输入（额定寿命、动作频次）以 BOM 描述解析或人工补录为准，缺数据时采用保守默认值。",
-        "4. 参数库为示例数据（来源已在附录 B 标注），仅用于演示与学习，不得用于产品认证。",
-        "5. 冗余收益未计入共因失效影响，实际收益通常低于计算值。",
-        "6. MTBF 与「产品能用 N 年」不等价：本报告不提供寿命承诺，只提供随机失效视角的存活率与磨损视角的估算。",
+        "同一份 BOM 下不同设计/器件选型的横向比较（系统误差在比值中大部分抵消）；",
+        "失效率贡献排序与短板定位（前几项决定整机水平，这个结论对参数偏差不敏感）；",
+        "降额超限与接近上限项目的初筛（需再对照本单位规范确认边界值）；",
+        "磨损件是否可能成为限制项的数量级判断（4 年 vs 10 年这类区别可信）。",
+    ]:
+        story.append(Paragraph("· " + line, st["body"]))
+
+    story.append(Paragraph("不能用于", st["h2"]))
+    for line in [
+        "向客户提交的正式 MTBF 报告、招标应答、产品认证与安全定级；",
+        "索赔、召回、寿命承诺的判定依据；",
+        "与其他标准（MIL ↔ Telcordia）的数字交叉引用或相加——两套 λ 建模口径不同。",
+    ]:
+        story.append(Paragraph("· " + line, st["body"]))
+
+    story.append(Paragraph("口径提醒", st["h2"]))
+    for line in [
+        "本报告为理论预计，反映随机失效视角，与实际值的偏差通常在数倍量级，不代表实测寿命。",
+        "预计结果不能替代 RDT（可靠性增长/验证试验）或现场数据；对外承诺前必须取得实测证据。",
+        "MTBF 与「产品能用 N 年」不等价：MTBF 回答多久坏一次，磨损寿命回答能用多久，两者不可相加。",
     ]:
         story.append(Paragraph(line, st["body"]))
 
@@ -616,6 +740,14 @@ def build_xlsx(project: Dict[str, Any], payload: Dict[str, Any], param_meta: Dic
         ["MTBF (h)", a.get("mtbf_hours")],
         ["R(t) 目标年限", a.get("r_at_target")],
         ["判定", a.get("verdict")],
+        [
+            "数据质量",
+            {
+                "demo": "示例量级（未按标准原表录入）",
+                "partial": "部分类目已按原表录入",
+                "verified": "已按标准原表录入",
+            }.get(param_meta.get("data_quality", "demo"), str(param_meta.get("data_quality", ""))),
+        ],
         ["生成时间", datetime.now().strftime("%Y-%m-%d %H:%M:%S")],
     ]
     ws.append(["项目", "内容"])
@@ -626,6 +758,15 @@ def build_xlsx(project: Dict[str, Any], payload: Dict[str, Any], param_meta: Dic
         ws.cell(row=1, column=c).fill = head_fill_factory()
     ws.column_dimensions["A"].width = 22
     ws.column_dimensions["B"].width = 60
+
+    # 局限性（紧跟汇总，让人先看边界再往下看数字）
+    _sheet(
+        wb,
+        "局限性",
+        ["维度", "本次情况", "对结论的影响"],
+        _limitations(payload, param_meta),
+        [26, 46, 56],
+    )
 
     # 假设
     _sheet(wb, "假设参数", ["参数", "取值", "说明"], [r[1:] if len(r) == 3 else r for r in _assumption_lines(payload, param_meta)][1:], [28, 46, 50])

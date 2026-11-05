@@ -64,3 +64,29 @@ export const VARIABLE_TEXT: Record<string, string> = {
   duty_cycle: '日通电占比',
   environment: '环境类别',
 }
+
+/**
+ * 参数库的数据成色。
+ *
+ * 【为什么界面必须显示这个】
+ * 「算法算对了」和「喂进去的数字是真的」是两件事。如果两者在界面上长得一模一样，
+ * 用户会默认结果是照标准算的。把这个标记摆在参数库页和结果页，是为了让
+ * 「现在这版数字只能做相对比较，不能对外报」这件事一眼可见，不靠人记。
+ */
+export const DATA_QUALITY: Record<string, { label: string; color: string; hint: string }> = {
+  verified: {
+    label: '已按标准原表录入',
+    color: 'green',
+    hint: '参数取自标准正本，可用于正式报告',
+  },
+  partial: {
+    label: '部分类目已录入',
+    color: 'orange',
+    hint: '部分类目仍是示例值，结论按最弱的一环打折',
+  },
+  demo: {
+    label: '示例量级',
+    color: 'red',
+    hint: '未按标准原表录入，绝对值不可对外引用，只可用于横向比较',
+  },
+}

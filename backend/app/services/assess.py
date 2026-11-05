@@ -239,10 +239,13 @@ def param_meta(standard: str) -> Dict[str, Any]:
         "display_name": p.display_name,
         "source_ref": p.source_ref,
         "disclaimer": p.disclaimer,
+        "data_quality": p.data_quality,
+        "data_quality_note": p.data_quality_note,
         "notes": p.notes,
         "environments": [{"code": k, "label": v["label"], "mult": v["mult"]} for k, v in p.environments.items()],
         "quality_levels": [
             {"code": k, "label": v["label"], "pi_q": v["pi_q"]} for k, v in p.quality_levels.items()
         ],
         "category_count": len(p.categories),
+        "confidence_factor_90": p.confidence_factor_90,
     }

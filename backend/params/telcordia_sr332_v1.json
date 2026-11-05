@@ -4,6 +4,8 @@
   "display_name": "Telcordia SR-332（通信设备可靠性预计，Issue 4）",
   "source_ref": "Telcordia SR-332 Issue 4 (2016) — Method I（Parts Count / Black Box）稳态失效率模型；π 因子定义见 Issue 4 Sec.6~Sec.8",
   "disclaimer": "本参数库为【示例数据，仅供演示/学习】：λ_G 取公开文献中的典型量级，未逐表抄录 SR-332 原值；π_Q、π_E 采用标准常用档位。正式使用请以标准原表替换。",
+  "data_quality": "demo",
+  "data_quality_note": "SR-332 Issue 4 由 Ericsson 按 Enterprise License 销售，无合法免费副本。当前 λ_G 取自公开文献与厂商公开 FIT 数据的量级，π 档位按标准公开描述构造。取得 EL 授权并录入 Section 8/9 原表后，把本字段改为 verified。",
   "notes": {
     "method": "本实现对应 Method I（零件计数/黑盒法）：λ_SS = λ_G × π_T × π_Q × π_S × π_E。Method II（实验室数据）与 Method III（现场数据）需要实测数据，本系统不实现。",
     "lambda_g": "Telcordia 的基础失效率 λ_G，单位 FIT。注意：它与 MIL-217F 的 λ_g 不是同一个量（建模口径不同），所以两套库必须分别维护、不能混用。这也是「双标准对比」有意义的原因。",

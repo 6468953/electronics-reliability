@@ -34,7 +34,7 @@ import {
 } from 'antd'
 import { DatabaseOutlined, InfoCircleOutlined, SearchOutlined } from '@ant-design/icons'
 import { getParamSet, listParamVersions } from '../api'
-import { STANDARD_TEXT, num } from '../utils/format'
+import { DATA_QUALITY, STANDARD_TEXT, num } from '../utils/format'
 
 /** 把某类别的 stress_spec 压成一行可读的说明 */
 function describeSpec(spec: any): string {
@@ -156,7 +156,26 @@ export default function Params() {
           <>
             <Typography.Paragraph style={{ fontSize: 12.5, marginBottom: 6 }}>
               <b>{detail.display_name}</b>（{detail.version_tag}）· 共 {detail.category_count} 个类目
+              {(() => {
+                const dq = DATA_QUALITY[detail.data_quality] || {
+                  label: detail.data_quality || '未知',
+                  color: 'default',
+                  hint: '',
+                }
+                return (
+                  <Tooltip title={dq.hint}>
+                    <Tag color={dq.color} style={{ marginLeft: 8 }}>
+                      数据成色：{dq.label}
+                    </Tag>
+                  </Tooltip>
+                )
+              })()}
             </Typography.Paragraph>
+            {detail.data_quality_note && (
+              <Typography.Paragraph style={{ fontSize: 12, color: '#8C8C8C', marginBottom: 6 }}>
+                {detail.data_quality_note}
+              </Typography.Paragraph>
+            )}
             <Typography.Paragraph style={{ fontSize: 12.5, marginBottom: 6 }}>
               <b>标准出处：</b>
               {detail.source_ref}

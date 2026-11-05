@@ -84,6 +84,16 @@ class ParamSet:
     stress_lambda_factor: float = 0.8
     confidence_factor_90: float = 1.0
 
+    # ---- 数据可信度标记 -------------------------------------------------
+    # 引擎算得对不对是一回事，喂给它的数字可不可信是另一回事。
+    # data_quality 就是把这个区别显式化，不让「示例值」和「照标准表录入的值」
+    # 在界面上长得一模一样——否则用户会默认它是照标准算的。
+    #   demo     = 示例量级，只够做趋势与相对比较，绝对值不可引用
+    #   partial  = 部分类目已按原表录入，其余仍是示例值
+    #   verified = 全部按标准原表录入，可用于正式报告
+    data_quality: str = "demo"
+    data_quality_note: str = ""
+
     # ---- 便捷查询 -------------------------------------------------------
     def env_label(self, code: str) -> str:
         return self.environments.get(code, {}).get("label", code)
@@ -173,6 +183,8 @@ def load_param_set(standard: str, param_dir: Optional[str] = None) -> ParamSet:
         notes=raw.get("notes", {}),
         stress_lambda_factor=float(raw.get("stress_lambda_factor", 1.0)),
         confidence_factor_90=float(raw.get("confidence_factor_90", 1.0)),
+        data_quality=raw.get("data_quality", "demo"),
+        data_quality_note=raw.get("data_quality_note", ""),
     )
 
 

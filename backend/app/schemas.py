@@ -18,7 +18,7 @@ from __future__ import annotations
 
 from typing import Any, Dict, List, Optional, Union
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 
 # ---------------------------------------------------------------------------
@@ -57,6 +57,26 @@ class UserOut(BaseModel):
 # ---------------------------------------------------------------------------
 
 
+def normalize_survival(v: Optional[float]) -> Optional[float]:
+    """把「目标存活率」统一成 0~1 的小数。
+
+    【为什么需要这个函数】
+    同一个数在系统里有两套写法：数据库与计算核心用小数（0.95），而项目表单上
+    用户按百分数填（95）。之前没有做转换，结果新建项目的 target_survival 被存成 95，
+    导致两处错误：主页卡片显示「存活率 ≥ 9500%」，判定永远不通过。
+
+    这里做归一化而不是直接报错——API 直调的人也会顺手传 95，与其 422 拒绝，
+    不如按常识解释掉（> 1 就是百分数），同时把真正的非法值（≤0、≥1）拦住。
+    """
+    if v is None:
+        return v
+    if v > 1:
+        v = v / 100.0
+    if not (0 < v < 1):
+        raise ValueError("目标存活率必须落在 0~1（或 1~100 的百分数）之间，不能等于 0 或 1")
+    return v
+
+
 class ProjectCreate(BaseModel):
     name: str = Field(min_length=1, max_length=128)
     code: str = Field(default="", max_length=64)
@@ -64,6 +84,11 @@ class ProjectCreate(BaseModel):
     target_years: float = 5.0
     target_survival: float = 0.95
     mtbf_threshold_hours: Optional[float] = None
+
+    @field_validator("target_survival")
+    @classmethod
+    def _check_survival(cls, v: float) -> float:
+        return normalize_survival(v)
 
 
 class ProjectUpdate(BaseModel):
@@ -73,6 +98,11 @@ class ProjectUpdate(BaseModel):
     target_survival: Optional[float] = None
     mtbf_threshold_hours: Optional[float] = None
     status: Optional[str] = None
+
+    @field_validator("target_survival")
+    @classmethod
+    def _check_survival(cls, v: Optional[float]) -> Optional[float]:
+        return normalize_survival(v)
 
 
 # ---------------------------------------------------------------------------

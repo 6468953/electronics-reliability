@@ -86,7 +86,9 @@ export default function Home() {
   const onCreate = async () => {
     const v = await form.validateFields()
     try {
-      const p = await createProject(v)
+      // 表单上按百分数填（95），后端与计算核心一律用小数（0.95）。
+      // 这一步以前漏了，结果存进去是 95，卡片显示「存活率 ≥ 9500%」，判定永远不通过。
+      const p = await createProject({ ...v, target_survival: v.target_survival / 100 })
       message.success('项目已创建')
       setOpen(false)
       form.resetFields()

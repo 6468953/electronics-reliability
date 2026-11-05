@@ -4,6 +4,8 @@
   "display_name": "MIL-HDBK-217F（美军可靠性预计手册，Notice 2）",
   "source_ref": "MIL-HDBK-217F Notice 2 (1995) — Part Count 见 Sec.5~Sec.10 各类别表；Part Stress 见各类别详细模型",
   "disclaimer": "本参数库为【示例数据，仅供演示/学习】：绝对失效率量级取自公开标准与公开文献的典型范围，环境倍率与质量因子采用标准常用档位，但未逐格抄录原表数值，不可用于真实产品认证结论。正式使用请以标准原表替换 params 目录下同名 JSON（结构不变，引擎无需改代码）。",
+  "data_quality": "demo",
+  "data_quality_note": "MIL-HDBK-217F Notice 2 是美国国防部公开文件（quicksearch.dla.mil 可免费下载，无授权限制）。当前 λ_b 与各 π 因子档位取自公开文献的典型量级，未逐表录入原表——这是实现时的欠账，不是权限问题。按 tools/param_worksheet.py 生成的工单逐表录入后，把本字段改为 verified。",
   "notes": {
     "lambda_g": "基础失效率，单位 FIT（每 10^9 小时的失效次数），基准条件：环境 GB（地面固定）、质量等级 commercial、25~40°C。实际 λ_g(类别,环境) = lambda_g × environments[环境].mult。",
     "env_mult": "环境倍率，等效于 π_E。以 GB=1.0 为基准，按 MIL-HDBK-217F π_E 的常用档位取值（示例）。",
