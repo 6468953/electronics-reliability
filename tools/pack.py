@@ -26,7 +26,21 @@ import zipfile
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
-PKG_NAME = "可靠性评估系统-v1.0"
+
+
+def _read_version() -> str:
+    """读仓库根的 VERSION 文件，让发布包目录名跟系统版本一致。
+
+    以前这里写死 "v1.0"，版本升到 1.2 后打出来的包还叫 v1.0，
+    发出去以后靠文件名分不清新旧。
+    """
+    try:
+        return (ROOT / "VERSION").read_text(encoding="utf-8").strip()
+    except OSError:
+        return "0.0.0"
+
+
+PKG_NAME = f"可靠性评估系统-v{_read_version()}"
 OUT_ROOT = ROOT / "发布包"
 STAGE = OUT_ROOT / PKG_NAME
 ZIP_PATH = OUT_ROOT / f"{PKG_NAME}.zip"
@@ -51,6 +65,7 @@ INCLUDE_DIRS = [
 #   要改前端请在源码仓库里改，改完 npm run build 再重新打包。
 INCLUDE_FILES = [
     "README.md",
+    "VERSION",          # backend/app/config.py 从这里读版本号，缺了就变成 0.0.0
     "start.bat",
     "start.sh",
     "backend/requirements.txt",

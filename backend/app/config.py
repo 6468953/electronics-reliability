@@ -22,8 +22,25 @@ for d in (DATA_DIR, REPORT_DIR, UPLOAD_DIR):
     d.mkdir(parents=True, exist_ok=True)
 
 
+def _read_version() -> str:
+    """版本号的唯一来源是仓库根的 VERSION 文件。
+
+    以前写死在 app/main.py 两处，改一次要记得改两遍 —— 实际上漏过，
+    接口还在返回 1.0.0，文档已经写到 V1.2。现在只认这一个文件；
+    读不到就返回 0.0.0，不让"版本号读不到"变成起不来的理由。
+    """
+    try:
+        return (PROJECT_DIR / "VERSION").read_text(encoding="utf-8").strip()
+    except OSError:
+        return "0.0.0"
+
+
+APP_VERSION = _read_version()
+
+
 class Settings:
     app_name: str = "电子零件可靠性评估系统"
+    app_version: str = APP_VERSION
     api_prefix: str = "/api/v1"
 
     # 默认 SQLite；迁移 PostgreSQL 只需 export DATABASE_URL=postgresql+psycopg://...

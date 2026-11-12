@@ -39,12 +39,21 @@ async def lifespan(app: FastAPI):
         logger.info("数据库初始化与种子数据完成")
     except Exception as e:  # 种子失败不该阻止服务启动（比如只读挂载）
         logger.warning("种子数据初始化失败：%s", e)
+
+    # 默认密钥只适合本机试用。挂到内网或让同事访问前必须换掉，
+    # 否则知道这个常量的人可以自己签一个 admin 的 token 直接登进来。
+    if settings.jwt_secret == "dev-only-secret-change-me-in-production":
+        logger.warning(
+            "JWT_SECRET 仍是默认值，仅限本机试用；对外提供服务前请设置随机密钥"
+            "（set JWT_SECRET=<32位以上随机串>）"
+        )
+    logger.info("版本 %s，接口前缀 %s", settings.app_version, settings.api_prefix)
     yield
 
 
 app = FastAPI(
     title="电子零件可靠性评估系统 API",
-    version="1.0.0",
+    version=settings.app_version,
     description=(
         "BOM 导入 → 零件自动分类 → 可靠性预计（MIL-HDBK-217F / Telcordia SR-332）→ "
         "磨损寿命 → 降额检查 → 敏感性分析 → 评估报告。\n\n"
@@ -86,7 +95,7 @@ for _router in (
 
 @app.get("/api/health", tags=["系统"])
 def health():
-    return {"status": "ok", "app": settings.app_name, "version": "1.0.0"}
+    return {"status": "ok", "app": settings.app_name, "version": settings.app_version}
 
 
 # ---------------------------------------------------------------------------
