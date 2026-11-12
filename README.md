@@ -18,6 +18,7 @@ Windows 双击 `start.bat`，mac/Linux 执行 `./start.sh`。脚本负责建虚�
 改代码要起两个进程：
 
 ```bash
+# Windows 用 .venv/Scripts/python，mac/Linux 用 .venv/bin/python
 cd backend && .venv/Scripts/python -m uvicorn app.main:app --reload --port 8000
 cd frontend && npm run dev        # 5173，热更新
 ```
@@ -132,7 +133,7 @@ VERSION       版本号唯一来源，config.py 和 pack.py 都读它
 ## 测试
 
 ```bash
-cd backend && .venv/Scripts/python -m pytest tests -q      # 46 passed
+cd backend && .venv/Scripts/python -m pytest tests -q      # 46 passed（mac/Linux 换 .venv/bin/python）
 ```
 
 覆盖重点：参数库自洽、规格解析边界（`@40℃` 不被当成额定温度）、三级分流阈值、计数法与应力法的手算对照、Arrhenius 与幂律、存活率反推、RBD 并联等效、降额四档的浮点边界、敏感性单调性；接口层覆盖登录、越权、报告生成与下载。
