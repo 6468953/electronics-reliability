@@ -107,9 +107,28 @@ def _map_headers(row: List[Any]) -> Dict[str, int]:
     return mapping
 
 
+def _decode_csv(content: bytes) -> Tuple[str, str]:
+    """把 CSV 字节解成文本，返回 (文本, 实际用的编码)。
+
+    【为什么不能只按 UTF-8 读】
+    中文 Windows 上 Excel 的「另存为 CSV」默认写 ANSI(GBK)，这是 BOM 最常见的来源。
+    只按 utf-8 解码会整张表变成 \ufffd，接着表头识别失败，用户明明有「料号/规格描述」
+    两列却被告诉「未找到表头」——错在解码，提示却指向格式，用户会越改越乱。
+
+    顺序试：utf-8-sig（带 BOM 的 UTF-8）→ gb18030（兼容 GBK/GB2312）→ utf-16。
+    gb18030 几乎能解码任意字节，所以必须排在 utf-8 后面，否则 UTF-8 中文会被误判。
+    """
+    for enc in ("utf-8-sig", "gb18030", "utf-16"):
+        try:
+            return content.decode(enc), enc
+        except (UnicodeDecodeError, UnicodeError):
+            continue
+    return content.decode("utf-8", errors="replace"), "utf-8(有损)"
+
+
 def _read_rows(filename: str, content: bytes) -> List[List[Any]]:
     if filename.lower().endswith(".csv"):
-        text = content.decode("utf-8-sig", errors="replace")
+        text, _enc = _decode_csv(content)
         return [row for row in csv.reader(io.StringIO(text))]
     wb = load_workbook(io.BytesIO(content), data_only=True, read_only=True)
     ws = wb.active
@@ -120,6 +139,10 @@ def _read_rows(filename: str, content: bytes) -> List[List[Any]]:
 
 def parse_upload(filename: str, content: bytes) -> Tuple[List[Dict[str, Any]], List[Dict[str, Any]]]:
     """解析上传文件 → (行列表, 问题列表)。问题列表里 level=error 的行不返回。"""
+    csv_enc = ""
+    if filename.lower().endswith(".csv"):
+        _, csv_enc = _decode_csv(content)
+
     rows = _read_rows(filename, content)
     if not rows:
         return [], [{"level": "error", "code": "empty_file", "message": "文件为空或无法读取", "line_no": None}]
@@ -134,6 +157,16 @@ def parse_upload(filename: str, content: bytes) -> Tuple[List[Dict[str, Any]], L
             break
 
     issues: List[Dict[str, Any]] = []
+    if csv_enc and csv_enc not in ("utf-8-sig",):
+        issues.append(
+            {
+                "level": "info",
+                "code": "csv_encoding",
+                "message": f"CSV 按 {csv_enc} 解码（Excel 中文环境另存为 CSV 的默认编码）。"
+                "如果描述里出现乱码，请用「另存为 → CSV UTF-8」重新导出。",
+                "line_no": None,
+            }
+        )
     if header_idx < 0:
         return [], [
             {

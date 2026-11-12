@@ -105,6 +105,54 @@ def run_assessment(
     return {"assessment": assess_service.summary(record), "result": payload}
 
 
+# 【为什么这个固定路径必须写在 /assessments/{assessment_id} 前面】
+# FastAPI 按注册顺序匹配，先命中先返回。"compare" 能被当成 assessment_id 的字符串值，
+# 如果排在参数路由后面，请求会先落进 get_assessment，然后因为 int 解析失败返回 422，
+# 整个"两次评估对比"功能在 API 层就是死的（页面只会看到一句 Input should be a valid integer）。
+@router.get("/assessments/compare")
+def compare_two(
+    ids: str = Query(..., description="两个评估 id，逗号分隔，如 3,7"),
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
+):
+    try:
+        id_list = [int(x) for x in ids.split(",") if x.strip()]
+    except ValueError:
+        raise HTTPException(status_code=400, detail="ids 格式应为 3,7")
+    if len(id_list) != 2:
+        raise HTTPException(status_code=400, detail="请提供两个评估 id")
+
+    records = [_get_assessment(db, i, user) for i in id_list]
+    out = []
+    for r in records:
+        payload = json.loads(r.result_json or "{}")
+        a = payload.get("assessment", {})
+        out.append(
+            {
+                "assessment": assess_service.summary(r),
+                "bom_version_id": r.bom_version_id,
+                "lambda_total_fit": r.lambda_total_fit,
+                "mtbf_hours": r.mtbf_hours,
+                "r_at_target": r.r_at_target,
+                "verdict": r.verdict,
+                "top_contributors": a.get("top_contributors", [])[:8],
+                "wear": (payload.get("wear", {}) or {}).get("items", [])[:5],
+            }
+        )
+
+    a0, a1 = out
+    delta = {
+        "mtbf_change_pct": (
+            round((a1["mtbf_hours"] - a0["mtbf_hours"]) / a0["mtbf_hours"] * 100, 2)
+            if a0["mtbf_hours"] and a1["mtbf_hours"]
+            else None
+        ),
+        "r_change_pp": round((a1["r_at_target"] - a0["r_at_target"]) * 100, 2),
+        "verdict_change": f"{a0['verdict']} → {a1['verdict']}",
+    }
+    return {"left": a0, "right": a1, "delta": delta}
+
+
 @router.get("/assessments/{assessment_id}")
 def get_assessment(assessment_id: int, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
     record = _get_assessment(db, assessment_id, user)
@@ -258,50 +306,6 @@ def compare_standards(assessment_id: int, db: Session = Depends(get_db), user: U
     parts = bom_service.items_to_part_inputs(db, version.id)
     assumption = assess_service.to_core_assumption(_assumption_of(record))
     return core_compare(parts, assumption, str(settings.param_dir))
-
-
-@router.get("/assessments/compare")
-def compare_two(
-    ids: str = Query(..., description="两个评估 id，逗号分隔，如 3,7"),
-    db: Session = Depends(get_db),
-    user: User = Depends(get_current_user),
-):
-    try:
-        id_list = [int(x) for x in ids.split(",") if x.strip()]
-    except ValueError:
-        raise HTTPException(status_code=400, detail="ids 格式应为 3,7")
-    if len(id_list) != 2:
-        raise HTTPException(status_code=400, detail="请提供两个评估 id")
-
-    records = [_get_assessment(db, i, user) for i in id_list]
-    out = []
-    for r in records:
-        payload = json.loads(r.result_json or "{}")
-        a = payload.get("assessment", {})
-        out.append(
-            {
-                "assessment": assess_service.summary(r),
-                "bom_version_id": r.bom_version_id,
-                "lambda_total_fit": r.lambda_total_fit,
-                "mtbf_hours": r.mtbf_hours,
-                "r_at_target": r.r_at_target,
-                "verdict": r.verdict,
-                "top_contributors": a.get("top_contributors", [])[:8],
-                "wear": (payload.get("wear", {}) or {}).get("items", [])[:5],
-            }
-        )
-
-    a0, a1 = out
-    delta = {
-        "mtbf_change_pct": (
-            round((a1["mtbf_hours"] - a0["mtbf_hours"]) / a0["mtbf_hours"] * 100, 2)
-            if a0["mtbf_hours"] and a1["mtbf_hours"]
-            else None
-        ),
-        "r_change_pp": round((a1["r_at_target"] - a0["r_at_target"]) * 100, 2),
-        "verdict_change": f"{a0['verdict']} → {a1['verdict']}",
-    }
-    return {"left": a0, "right": a1, "delta": delta}
 
 
 @router.get("/assessments")

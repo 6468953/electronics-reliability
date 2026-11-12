@@ -192,6 +192,20 @@ def _pareto_chart(rows: List[Dict[str, Any]], width: float = 480) -> Drawing:
 # ---------------------------------------------------------------------------
 
 
+def _duty_hours(a: Dict[str, Any]) -> Optional[float]:
+    """日通电小时数。
+
+    评估结果里存的是 duty_cycle（0~1 的占比），小时数只存在于请求体里，算完就折算掉了。
+    报告以前直接读 duty_hours_per_day，取不到就是 None，于是「日通电时长」常年显示「—」，
+    而同一行的 duty=0.333 又是对的 —— 一份报告里两个字段自相矛盾，评审只会问"到底按几小时算的"。
+    """
+    v = a.get("duty_hours_per_day")
+    if v is not None:
+        return float(v)
+    dc = a.get("duty_cycle")
+    return float(dc) * 24 if dc is not None else None
+
+
 def _assumption_lines(payload: Dict[str, Any], param_meta: Dict[str, Any]) -> List[List[str]]:
     a = payload.get("assumptions", {})
     duty = a.get("duty_cycle", 0) or 0
@@ -209,7 +223,7 @@ def _assumption_lines(payload: Dict[str, Any], param_meta: Dict[str, Any]) -> Li
         ["工作环境类别", env_label, "决定 π_E，是全机失效率的基准倍率"],
         ["环境温度", f'{_fmt(a.get("ambient_temp_c"), 1)} °C', "决定 π_T 与磨损寿命"],
         ["元件质量等级", q_label, "决定 π_Q，质量等级差异可达数倍"],
-        ["日通电时长", f'{_fmt(a.get("duty_hours_per_day"), 1)} h/日（duty={duty:.3f}）', "折算 R(t) 的时间轴与磨损年限"],
+        ["日通电时长", f"{_fmt(_duty_hours(a), 1)} h/日（duty={duty:.3f}）", "折算 R(t) 的时间轴与磨损年限"],
         ["目标年限 / 存活率", f'{_fmt(a.get("target_years"), 1)} 年 / {(_fmt(a.get("target_survival"), 3))}', "判定依据"],
         ["MTBF 门槛", _fmt(a.get("mtbf_threshold_hours"), 0) + " h" if a.get("mtbf_threshold_hours") else "未设置", "可选的第二道判定闸"],
         ["计算标准 / 模式", f'{a.get("standard")} / {"零件计数法" if a.get("mode") == "parts_count" else "零件应力法"}', "两套标准口径不同，不可混用"],
@@ -735,7 +749,7 @@ def build_xlsx(project: Dict[str, Any], payload: Dict[str, Any], param_meta: Dic
         ["环境类别", (payload.get("assumptions") or {}).get("environment", "")],
         ["环境温度 °C", (payload.get("assumptions") or {}).get("ambient_temp_c", "")],
         ["质量等级", (payload.get("assumptions") or {}).get("quality_level", "")],
-        ["日通电小时", (payload.get("assumptions") or {}).get("duty_hours_per_day", "")],
+        ["日通电小时", _fmt(_duty_hours(payload.get("assumptions") or {}), 1)],
         ["λ_total (FIT)", a.get("lambda_total_fit")],
         ["MTBF (h)", a.get("mtbf_hours")],
         ["R(t) 目标年限", a.get("r_at_target")],
@@ -769,7 +783,11 @@ def build_xlsx(project: Dict[str, Any], payload: Dict[str, Any], param_meta: Dic
     )
 
     # 假设
-    _sheet(wb, "假设参数", ["参数", "取值", "说明"], [r[1:] if len(r) == 3 else r for r in _assumption_lines(payload, param_meta)][1:], [28, 46, 50])
+    #
+    # _assumption_lines 返回的第一行是表头，[1:] 去掉它；
+    # 之前写成 [r[1:] ... for r in ...] ，把每行第一格也一起砍了 —— 结果「参数」列
+    # 装的是取值、「取值」列装的是说明，参数名整个消失，看报告的人对不上是哪一项假设。
+    _sheet(wb, "假设参数", ["参数", "取值", "说明"], _assumption_lines(payload, param_meta)[1:], [28, 46, 50])
 
     # 计算明细
     calc_rows = []

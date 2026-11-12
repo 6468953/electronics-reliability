@@ -131,3 +131,33 @@ def download(report_id: int, db: Session = Depends(get_db), user: User = Depends
     )
     filename = f"可靠性评估报告_{r.created_at.strftime('%Y%m%d')}_{r.id}.{r.kind}"
     return FileResponse(path, media_type=media, filename=filename)
+
+
+@router.delete("/reports/{report_id}", status_code=204)
+def delete_report(report_id: int, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
+    """删掉一份报告（连同磁盘文件）。
+
+    【为什么需要这个口子】
+    "生成"是幂等不了的：同一份评估每点一次就多一个文件，历史全部保留（这是有意的，
+    方便对比不同时间的结论）。但保留得有人清理——一批项目反复重跑几十次之后，
+    data/reports 下会堆一堆内容相同、只有时间戳不同的文件，而界面上没有任何入口能删。
+    """
+    r = db.get(Report, report_id)
+    if not r:
+        raise HTTPException(status_code=404, detail="报告不存在")
+    p = db.get(Project, r.project_id)
+    if p and user.role != "admin" and p.owner_id != user.id:
+        raise HTTPException(status_code=403, detail="无权访问")
+
+    path = Path(r.file_path) if r.file_path else None
+    if path and path.exists() and path.is_file():
+        try:
+            path.unlink()
+        except OSError:
+            # 文件删不掉（被占用/只读）不该阻止取消这条记录，否则列表里会留一条永远消不掉的死条目
+            pass
+
+    db.delete(r)
+    db.commit()
+    log_action(db, user, "delete_report", "report", report_id, f"kind={r.kind}")
+    return None

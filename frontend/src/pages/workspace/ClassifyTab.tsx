@@ -179,6 +179,32 @@ export default function ClassifyTab({ version, onChanged }: { version: any; onCh
     }
   }
 
+  /**
+   * 全量重跑前先问一句。
+   *
+   * 「重新分类全部行」会把人工确认过的行退回待确认——这是它的定义，不算 bug，
+   * 但人工确认是本系统里最贵的一步动作（每行要判断、可能要改类目、还可能喂给知识库学习）。
+   * 一次误点就全没了，而且没有撤销。所以有确认行时必须拦一下，
+   * 并把这个按钮和「只处理未确认」的区别直接写在弹窗里。
+   */
+  const rerunAll = () => {
+    const confirmed = stats?.status?.confirmed ?? 0
+    if (!confirmed) {
+      rerun(false)
+      return
+    }
+    Modal.confirm({
+      title: '重新分类全部行？',
+      content:
+        `当前有 ${confirmed} 行是人工确认过的。全部重跑会把它们退回待确认，` +
+        '需要重新确认一遍，且无法撤销。只想让自动归类的行重算，用「只处理未确认」。',
+      okText: '仍然全部重跑',
+      okButtonProps: { danger: true },
+      cancelText: '取消',
+      onOk: () => rerun(false),
+    })
+  }
+
   const doConfirm = async () => {
     if (!confirmRow || !picked[confirmRow.id]) {
       message.warning('请先选择类目')
@@ -297,7 +323,7 @@ export default function ClassifyTab({ version, onChanged }: { version: any; onCh
         styles={{ body: { padding: 12 } }}
       >
         <Space wrap>
-          <Button type="primary" icon={<ThunderboltOutlined />} loading={running} onClick={() => rerun(false)}>
+          <Button type="primary" icon={<ThunderboltOutlined />} loading={running} onClick={rerunAll}>
             重新分类全部行
           </Button>
           <Tooltip title="跳过已人工确认的行，只处理自动归类与待确认">

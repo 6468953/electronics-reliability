@@ -25,6 +25,7 @@ import {
   Descriptions,
   Divider,
   Empty,
+  Popconfirm,
   Row,
   Select,
   Space,
@@ -46,6 +47,7 @@ import {
 import {
   compareAssessments,
   createReport,
+  deleteReport,
   downloadReport,
   getAssessment,
   listAssessments,
@@ -294,18 +296,40 @@ export default function ReportTab({
             },
             {
               title: '',
-              width: 90,
+              width: 130,
               render: (_: any, r: any) => (
-                <Tooltip title={r.exists ? '下载' : '文件已被清理，请重新生成'}>
-                  <Button
-                    size="small"
-                    type="link"
-                    disabled={!r.exists}
-                    onClick={() => downloadReport(r.id, `可靠性评估报告_${r.id}.${r.kind}`)}
+                <Space size={0}>
+                  <Tooltip title={r.exists ? '下载' : '文件已被清理，请重新生成'}>
+                    <Button
+                      size="small"
+                      type="link"
+                      disabled={!r.exists}
+                      onClick={() => downloadReport(r.id, `可靠性评估报告_${r.id}.${r.kind}`)}
+                    >
+                      下载
+                    </Button>
+                  </Tooltip>
+                  <Popconfirm
+                    title="删除这份报告？"
+                    description="文件会从磁盘删掉，不可恢复；需要时可以重新生成，数字完全一致。"
+                    okText="删除"
+                    okButtonProps={{ danger: true }}
+                    cancelText="取消"
+                    onConfirm={async () => {
+                      try {
+                        await deleteReport(r.id)
+                        message.success('已删除')
+                        load()
+                      } catch (e: any) {
+                        message.error(e.message)
+                      }
+                    }}
                   >
-                    下载
-                  </Button>
-                </Tooltip>
+                    <Button size="small" type="link" danger>
+                      删除
+                    </Button>
+                  </Popconfirm>
+                </Space>
               ),
             },
           ]}

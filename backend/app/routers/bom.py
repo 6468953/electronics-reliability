@@ -98,6 +98,10 @@ async def upload_bom(
     if not filename.lower().endswith((".xlsx", ".xlsm", ".csv")):
         raise HTTPException(status_code=400, detail="仅支持 .xlsx / .csv 文件（.xls 请另存为 .xlsx）")
 
+    # 先看大小再读内容。上传是整份读进内存的，等 read() 完再判就把内存花掉了——
+    # 有人传一个 200MB 的 csv 过来，20MB 的限制形同虚设。file.size 为 None 时退回读后判。
+    if file.size and file.size > 20 * 1024 * 1024:
+        raise HTTPException(status_code=400, detail=f"文件超过 20MB（当前 {file.size / 1024 / 1024:.1f}MB）")
     content = await file.read()
     if len(content) > 20 * 1024 * 1024:
         raise HTTPException(status_code=400, detail="文件超过 20MB")

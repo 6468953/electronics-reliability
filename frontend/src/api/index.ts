@@ -105,6 +105,7 @@ export const listReports = (projectId?: number) =>
   api<any[]>(`/reports${projectId ? `?project_id=${projectId}` : ''}`)
 export const downloadReport = (id: number, filename: string) =>
   download(`/reports/${id}/download`, filename)
+export const deleteReport = (id: number) => api<void>(`/reports/${id}`, { method: 'DELETE' })
 
 // ---------- 系统 ----------
 export const getGlossary = () => api<any>('/glossary')
